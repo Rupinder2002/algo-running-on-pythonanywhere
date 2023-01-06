@@ -3,6 +3,5 @@ finta
 fyers_api
 flask
 flask_socketio
-gunicorn
-uwsgi
 gevent
+gevent-websocket
