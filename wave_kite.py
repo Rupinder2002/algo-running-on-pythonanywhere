@@ -26,12 +26,11 @@ INDEX_MAP = {
     "BANKNIFTY": "NSE:NIFTY BANK",
 }
 
+
 class waveAlgo():
 
     def __init__(self):
-        self.is_android = False
-        if 'ANDROID_BOOTLOGO' in environ:
-            self.is_android = True
+        self.algo_status = True
 
         def check_last_expiry(day):
             month = calendar.monthcalendar(datetime.today().year, datetime.today().month)
@@ -66,6 +65,9 @@ class waveAlgo():
 
         threading.Thread(target=self.refresh).start()
         # threading.Thread(target=self.temp_update_ltp).start()
+
+    def __del__(self):
+        self.tradebook.to_csv(self.tradebook_path, index=False)
 
     def temp_update_ltp(self):
         starttime = time.time()
@@ -131,7 +133,6 @@ class waveAlgo():
         return (self.funds + self.actual_profit) - self.tradebook.query("unsubscribe == True").investment.sum()
 
     def refresh(self):
-        # threading.Thread(target=self._place_order).start()
         starttime = time.time()
         while True:
             try:
@@ -226,9 +227,8 @@ class waveAlgo():
             buy_sell_signal['ready_pe'] = (buy_sell_signal['prev_close'].tail(1).values[0] > ltp and is_short and abs(
                 buy_sell_signal['wtdiff'].tail(1).values[0]) > 2)
 
-            if not self.is_android:
-                print(buy_sell_signal.tail(1).to_string(), self.actual_profit)
-                print("============================")
+            print(buy_sell_signal.tail(1).to_string(), self.actual_profit)
+            print("============================")
             t = self.tradebook.query(f"symbol == '{old_symbol}' and side == 'PE' and unsubscribe != False")
             if not t.empty:
                 for index, row in t.iterrows():
@@ -287,7 +287,7 @@ class waveAlgo():
             delta = timedelta(minutes=5)
             if not last_exit.empty and not last_exit.isna().bool() and not (datetime.now().time() > (
                     datetime.min + math.ceil(
-                    (datetime.strptime(last_exit.values[0], "%H:%M:%S") - datetime.min) / delta) * delta).time()):
+                (datetime.strptime(last_exit.values[0], "%H:%M:%S") - datetime.min) / delta) * delta).time()):
                 print('exited')
                 return False, False, False
             delta = timedelta(minutes=15)
@@ -295,7 +295,7 @@ class waveAlgo():
                 'exit_time'].tail(1)
             if not sl_order.empty and not sl_order.isna().bool() and not (datetime.now().time() > (
                     datetime.min + math.ceil(
-                    (datetime.strptime(sl_order.values[0], "%H:%M:%S") - datetime.min) / delta) * delta).time()):
+                (datetime.strptime(sl_order.values[0], "%H:%M:%S") - datetime.min) / delta) * delta).time()):
                 print("wait for next candle")
                 return False, False, False
             return strikePrice, orderId, side
@@ -306,14 +306,14 @@ class waveAlgo():
             return False, False, False
 
     def _place_order(self):
+        if not self.algo_status:
+            return
         if not (datetime.now().strftime('%H:%M') > '09:29'):
             return
         self._update_ltp()
         for symbol in ["NIFTY", "BANKNIFTY"]:
             is_valid_ema, side = self._get_ema_values(symbol)
             if not is_valid_ema:
-                continue
-            if not (datetime.now().strftime('%H:%M') < '15:20'):
                 continue
             strikePrice, orderId, side = self._loss_orders(symbol, side)
             if not strikePrice:
@@ -454,7 +454,33 @@ wv = waveAlgo()
 
 @app.route('/', methods=("POST", "GET"))
 def html_table():
-    return render_template('sample.html', row_data=wv.tradebook.values.tolist())
+    return render_template('sample.html', row_data=wv.tradebook.values.tolist(), algo_status=wv.algo_status)
+
+
+@socket.on('clientEvent')
+def algo_status(msg):
+    if msg == "stop":
+        wv.algo_status = False
+        wv.tradebook.to_csv(wv.tradebook_path, index=False)
+    else:
+        wv.algo_status = True
+
+
+@socket.on('liveMode')
+def algo_status(msg):
+    if msg != "live":
+        print("Switched to Live mode")
+        wv.kite_order = True
+    else:
+        print("Switched to Paper mode")
+        wv.kite_order = False
+
+
+@socket.on('exit_all')
+def algo_status(msg):
+    print("Closed all position")
+    wv.exit_all_position()
+
 
 @socket.on('message')
 def data(msg):
@@ -465,6 +491,7 @@ def data(msg):
                           profit=profit, balance=wv.balance)
     # time.sleep(1)
     return socket.emit("message", res, broadcast=True)
+
 
 try:
     socket.run(app, host='0.0.0.0')
