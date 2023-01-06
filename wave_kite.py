@@ -4,24 +4,17 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, date, timedelta
 from finta import TA as ta
-from fyers_api import fyersModel
-from fyers_api import accessToken
-from fyers_api.Websocket import ws
 import calendar
-import os
 from os import environ, symlink
 import time
 import threading
 import requests
-import json
 from urllib.parse import urlparse, parse_qs
-import sys
 from kite_trade import *
 from flask import Flask, request, render_template, session, redirect
 from flask_socketio import SocketIO
 # from flask_lt import run_with_lt
 from collections import Counter
-import talib
 
 app = Flask(__name__, template_folder='.')
 socket = SocketIO(app, ping_timeout=5, ping_interval=5, cors_allowed_origins="*")
