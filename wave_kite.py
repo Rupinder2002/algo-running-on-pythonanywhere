@@ -26,12 +26,6 @@ INDEX_MAP = {
     "BANKNIFTY": "NSE:NIFTY BANK",
 }
 
-
-@app.route('/', methods=("POST", "GET"))
-def html_table():
-    return render_template('sample.html', row_data=[])
-
-
 class waveAlgo():
 
     def __init__(self):
@@ -455,23 +449,27 @@ class waveAlgo():
         # tradebook.to_csv(self.tradebook_path, index=False)
 
 
-if __name__ == '__main__':
-    wv = waveAlgo()
+wv = waveAlgo()
 
 
-    @socket.on('message')
-    def data(msg):
-        profit = wv.actual_profit
-        res = render_template('data.html', row_data=wv.tradebook[1:].sort_values(by=['unsubscribe', 'entry_time'],
-                                                                                 ascending=[False,
-                                                                                            False]).values.tolist(),
-                              profit=profit, balance=wv.balance)
-        # time.sleep(1)
-        return socket.emit("message", res, broadcast=True)
+@app.route('/', methods=("POST", "GET"))
+def html_table():
+    return render_template('sample.html', row_data=wv.tradebook.values.tolist())
 
-    try:
-        socket.run(app, host='0.0.0.0')
-    except KeyboardInterrupt:
-        wv.tradebook.to_csv(wv.tradebook_path, index=False)
-    finally:
-        wv.tradebook.to_csv(wv.tradebook_path, index=False)
+@socket.on('message')
+def data(msg):
+    profit = wv.actual_profit
+    res = render_template('data.html', row_data=wv.tradebook[1:].sort_values(by=['unsubscribe', 'entry_time'],
+                                                                             ascending=[False,
+                                                                                        False]).values.tolist(),
+                          profit=profit, balance=wv.balance)
+    # time.sleep(1)
+    return socket.emit("message", res, broadcast=True)
+
+try:
+    # socket.run(app, host='0.0.0.0')
+    app.run()
+except KeyboardInterrupt:
+    wv.tradebook.to_csv(wv.tradebook_path, index=False)
+finally:
+    wv.tradebook.to_csv(wv.tradebook_path, index=False)
