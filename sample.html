@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Algo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='stylesheets/bootstrap.css') }}">
+    <style>
+    	.trade-right{
+    		float:right;
+    	}
+    	.trade-area{
+    		width: 100%;
+    		padding: 15px 30px;
+    		background-color: #1e1a23;
+    	}
+    	span{
+    	    color:white;
+    	    font-weight: strong
+    	}
+    	.profit {
+    	    color:green;
+    	    font-weight: strong
+    	}
+    	.loss {
+    	    color:red;
+    	    font-weight: strong
+    	}
+
+
+
+
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"
+            integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg=="
+            crossorigin="anonymous"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js"
+            integrity="sha512-aMGMvNYu8Ue4G+fHa359jcPb1u+ytAF+P2SCb+PxrjCdO3n3ZTxJ30zuH39rimUggmTwmh2u7wvQsDTHESnmfQ=="
+            crossorigin="anonymous"></script>
+    <script>
+        $(document).ready(function() {
+           const socket = io(window.host, {
+              // WARNING: in that case, there is no fallback to long-polling
+              transports: [ "websocket" ] // or [ "websocket", "polling" ] (the order matters)
+            });
+            socket.on('connect', function() {
+                socket.send('get')
+            });
+            socket.on('message', function(response) {
+                console.log(response)
+                socket.send('get')
+                $("#content").html(response)
+            });
+        });
+
+    </script>
+</head>
+<body>
+<div class="trade-area">
+    <div id="content">
+        {% block profit %}
+        {% endblock %}
+        {% block content %}
+        {% endblock %}
+    </div>
+
+</body>
+</html>

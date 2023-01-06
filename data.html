@@ -1,0 +1,37 @@
+{% block profit %}
+    <div class="row">
+        <div class="col-xs-6 shadow pb-3 rounded profit_bal">
+            <div class=" bd-highlight"><span>Balance</span></div>
+            <div class=" bd-highlight"><span>₹{{ balance|round(2, 'floor') }}</span></div>
+        </div>
+        <div class="col-xs-6 shadow pb-3 rounded profit_bal">
+            <div class="bd-highlight"><span>Profit/Loss</span></div>
+            <div class="bd-highlight"><span class='{{ "profit" if profit > 0 else "loss" }}'>₹{{ profit|round(2, 'floor') }}</span></div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    {% for row in row_data %}
+        <div class="row">
+            <div class="col-sm-12 shadow mb-3 rounded">
+                <div class="d-inline-flex flex-column bd-highlight mb-3">
+                    <div class="p-1 bd-highlight"><span>{{ row[0] }}</span></div>
+                    <div class="p-1 bd-highlight"><span>Remark:{{ row[12] }}<span></div>
+                </div>
+                <div class="d-inline-flex flex-column bd-highlight mb-3">
+                    <div class="p-1 bd-highlight"><span>Invested ₹{{ row[4]|round(2, 'floor') }}<span></div>
+                    <div class="p-1 bd-highlight"><span>{{ row[6] }} qty<span></div>
+                        <div class="p-1 bd-highlight"><span>{{ row[7]|round(2, 'floor') }} SL<span></div>
+                </div>
+                <div class="d-inline-flex flex-column bd-highlight mb-3 trade-right">
+                    <div class="p-1 bd-highlight"><span class='{{ "profit" if row[11] > 0 else "loss" }}'>₹{{ row[11]|round(2, 'floor') }}<span>
+                    </div>
+                    <div class="p-1 bd-highlight"><span>{{ row[5] }} Avg.</span></div>
+                    <div class="p-1 bd-highlight"><span>LTP ₹{{ row[10] }}</div>
+                </div>
+            </div>
+        </div>
+
+    {% endfor %}
+{% endblock %}
