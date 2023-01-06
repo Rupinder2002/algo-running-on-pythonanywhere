@@ -61,7 +61,6 @@ class waveAlgo():
         # enctoken = input("Enter Token: ")
         enctoken = "+20Sy+UzmcGu0/E+F77qqSDCRXHdU9hb4AptVkRLzMjk7YniCx0ZarVWwEQ79w1/q8kCRHxVQmVJIx39CfWdi2AEGbStLAAmhLFyrdKCPU6liOuaJmj3wg=="
         self.kite = KiteApp(enctoken=enctoken)
-        self._setup_fyers()
         self._setup_tradebook()
 
         threading.Thread(target=self.refresh).start()
@@ -81,51 +80,6 @@ class waveAlgo():
                             tradebook['ltp'] - 5, tradebook['ltp'] + 5)}})
             finally:
                 time.sleep(1 - ((time.time() - starttime) % 1))
-
-    def _setup_fyers(self):
-        username = "XA36717"
-        password = "Amod@fyres1"
-        pin = "4321"
-        client_id = "OUQC9PC52D-100"
-        secret_key = "20NPHCNQDE"
-        redirect_uri = "https://trade.fyers.in/api-login/redirect-uri/index.html"
-        response_type = "code"
-        headers = {
-            "accept": "application/json",
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36",
-            "accept-language": "en-US,en;q=0.9",
-        }
-
-        s = requests.Session()
-        s.headers.update(headers)
-
-        data1 = f'{{"fy_id":"{username}","password":"{password}","app_id":"2","imei":"","recaptcha_token":""}}'
-        r1 = s.post("https://api.fyers.in/vagator/v1/login", data=data1)
-        assert r1.status_code == 200, f"Error in r1:\n {r1.json()}"
-
-        request_key = r1.json()["request_key"]
-        data2 = f'{{"request_key":"{request_key}","identity_type":"pin","identifier":"{pin}","recaptcha_token":""}}'
-        r2 = s.post("https://api.fyers.in/vagator/v1/verify_pin", data=data2)
-        assert r2.status_code == 200, f"Error in r2:\n {r2.json()}"
-
-        headers = {"authorization": f"Bearer {r2.json()['data']['access_token']}",
-                   "content-type": "application/json; charset=UTF-8"}
-        data3 = f'{{"fyers_id":"{username}","app_id":"{client_id[:-4]}","redirect_uri":"{redirect_uri}","appType":"100","code_challenge":"","state":"abcdefg","scope":"","nonce":"","response_type":"code","create_cookie":true}}'
-        r3 = s.post("https://api.fyers.in/api/v2/token", headers=headers, data=data3)
-        assert r3.status_code == 308, f"Error in r3:\n {r3.json()}"
-
-        parsed = urlparse(r3.json()["Url"])
-        auth_code = parse_qs(parsed.query)["auth_code"][0]
-
-        session = accessToken.SessionModel(client_id=client_id, secret_key=secret_key, redirect_uri=redirect_uri,
-                                           response_type="code", grant_type="authorization_code")
-        session.set_token(auth_code)
-        response = session.generate_token()
-        access_token = response["access_token"]
-        print("Got the fyers access token!")
-        self.access_token = client_id + ":" + access_token
-        self.data_type = "symbolData"
-        self.fyers = fyersModel.FyersModel(client_id=client_id, token=access_token, log_path=os.getcwd())
 
     def _setup_tradebook(self):
         self.directory = f"{date.today().strftime('%Y-%m-%d')}"
