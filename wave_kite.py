@@ -19,13 +19,13 @@ import sys
 from kite_trade import *
 from flask import Flask, request, render_template, session, redirect
 from flask_socketio import SocketIO
-from flask_lt import run_with_lt
+# from flask_lt import run_with_lt
 from collections import Counter
 import talib
 
 app = Flask(__name__, template_folder='.')
 socket = SocketIO(app, ping_timeout=5, ping_interval=5, cors_allowed_origins="*")
-run_with_lt(socket, 'vivek-algo')
+# run_with_lt(socket, 'vivek-algo')
 INDEX_MAP = {
     "NIFTY": "NSE:NIFTY 50",
     "BANKNIFTY": "NSE:NIFTY BANK",
