@@ -313,8 +313,8 @@ class waveAlgo():
             is_valid_ema, side = self._get_ema_values(symbol)
             if not is_valid_ema:
                 continue
-            # if not (datetime.now().strftime('%H:%M') < '15:20'):
-            #     continue
+            if not (datetime.now().strftime('%H:%M') < '15:20'):
+                continue
             strikePrice, orderId, side = self._loss_orders(symbol, side)
             if not strikePrice:
                 continue
