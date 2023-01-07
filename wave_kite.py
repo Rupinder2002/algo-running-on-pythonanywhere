@@ -130,6 +130,7 @@ class waveAlgo():
         return (self.funds + self.actual_profit) - self.tradebook.query("unsubscribe == True").investment.sum()
 
     def refresh(self):
+        # threading.Thread(target=self._place_order).start()
         starttime = time.time()
         while True:
             try:
@@ -470,7 +471,8 @@ def algo_status(msg):
 
 @socket.on("enctoken")
 def token(msg):
-    wv.kite = KiteApp(enctoken=msg)
+    print(msg)
+    wv.kite = KiteApp(enctoken=str(msg))
 
 @socket.on('liveMode')
 def algo_status(msg):
