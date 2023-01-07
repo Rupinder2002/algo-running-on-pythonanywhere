@@ -31,8 +31,9 @@
             color: red;
             font-weight: strong
         }
-
-
+        .row{
+            padding:5px !important;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"
             integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg=="
@@ -42,14 +43,29 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js"
             integrity="sha512-aMGMvNYu8Ue4G+fHa359jcPb1u+ytAF+P2SCb+PxrjCdO3n3ZTxJ30zuH39rimUggmTwmh2u7wvQsDTHESnmfQ=="
             crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <script>
         $(document).ready(function () {
             const socket = io(window.host, {
                 // WARNING: in that case, there is no fallback to long-polling
                 transports: ["websocket"] // or [ "websocket", "polling" ] (the order matters)
             });
-            socket.on('connect', function () {
+            socket.on('connect', function (msg) {
                 socket.send('get')
+                console.log(msg)
+                if(msg){
+                    if(msg[0]){
+                        $("#algo_status").bootstrapToggle('on')
+                    }else{
+                        $("#algo_status").bootstrapToggle('off')
+                    }
+                    if(msg[1]){
+                        $("#algo_mode").bootstrapToggle('on')
+                    }else{
+                        $("#algo_mode").bootstrapToggle('off')
+                    }
+                }
             });
             socket.on('message', function (response) {
                 socket.send('get')
@@ -74,6 +90,11 @@
             $("#algo_mode").on('click', function () { // on change of state
                 socket.emit('exit_all', 'exit');
             })
+
+            $("#submit").click(function(){
+                var enctoken = $("#enctoken").val()
+                socket.emit('entoken', enctoken);
+            })
         });
 
     </script>
@@ -82,17 +103,26 @@
 <div class="trade-area">
     <div clas="container">
         <div class="row">
-            <div class="col-xs-4" style="padding:5px">
-                <label class="checkbox-inline" style="margin: auto 25px">
-                    <input type="checkbox" id="algo_status" checked data-toggle="toggle" data-size="sm" data-on="Start"
+            <div class="col-lg-12">
+                <input type="button" id="exit_all" value="Exit All Position" class="btn btn-danger btn-sm" style="width:100%"/>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xs-4">
+                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#myModal">
+                    Token
+                </button>
+            </div>
+            <div class="col-xs-4">
+                <label class="checkbox-inline">
+                    <input type="checkbox" id="algo_status" data-toggle="toggle" data-size="sm" data-on="Start"
                            data-off="Stop" data-onstyle="success" data-offstyle="danger">
                 </label>
+            </div>
+            <div class="col-xs-4">
                 <label class="checkbox-inline">
                     <input type="checkbox" id="algo_mode" data-toggle="toggle" data-size="sm" data-on="Live"
                            data-off="Paper" data-onstyle="success" data-offstyle="warning">
-                </label>
-                <label class="checkbox-inline">
-                    <input type="button" id="exit_all" value="Exit All Position" class="alert-danger"/>
                 </label>
             </div>
         </div>
@@ -101,6 +131,26 @@
             {% endblock %}
             {% block content %}
             {% endblock %}
+        </div>
+        <div id="myModal" class="modal fade" role="dialog">
+            <div class="modal-dialog">
+
+                <!-- Modal content-->
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title">Token</h4>
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="text" id="enctoken" placeholder="enctoken">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal" id="submit">Submit</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 </body>

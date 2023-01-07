@@ -30,7 +30,7 @@ INDEX_MAP = {
 class waveAlgo():
 
     def __init__(self):
-        self.algo_status = True
+        self.algo_status = False
 
         def check_last_expiry(day):
             month = calendar.monthcalendar(datetime.today().year, datetime.today().month)
@@ -59,15 +59,11 @@ class waveAlgo():
             self.next_expiry = f"{next_expiry.strftime('%y')}{int(next_expiry.strftime('%b'))}"
 
         # enctoken = input("Enter Token: ")
-        enctoken = "+20Sy+UzmcGu0/E+F77qqSDCRXHdU9hb4AptVkRLzMjk7YniCx0ZarVWwEQ79w1/q8kCRHxVQmVJIx39CfWdi2AEGbStLAAmhLFyrdKCPU6liOuaJmj3wg=="
-        self.kite = KiteApp(enctoken=enctoken)
+        self.kite = KiteApp(enctoken="")
         self._setup_tradebook()
 
         threading.Thread(target=self.refresh).start()
-        # threading.Thread(target=self.temp_update_ltp).start()
-
-    def __del__(self):
-        self.tradebook.to_csv(self.tradebook_path, index=False)
+        threading.Thread(target=self.temp_update_ltp).start()
 
     def temp_update_ltp(self):
         starttime = time.time()
@@ -122,6 +118,7 @@ class waveAlgo():
             if self.kite_order and fyers_profit >= self.target_profit:
                 print(f"Switiching to Papertrade only as Target profit is achived")
                 self.kite_order = False
+                socket.emit('connect', [wv.algo_status, wv.kite_order])
 
     def _calculate_balance(self):
         self.actual_profit = self.tradebook[
@@ -456,15 +453,24 @@ wv = waveAlgo()
 def html_table():
     return render_template('sample.html', row_data=wv.tradebook.values.tolist(), algo_status=wv.algo_status)
 
+@socket.on("connect")
+def connect(msg):
+    print(msg)
+    socket.emit('connect', [wv.algo_status, wv.kite_order])
 
 @socket.on('clientEvent')
 def algo_status(msg):
     if msg == "stop":
+        print("Algo Stopped")
         wv.algo_status = False
         wv.tradebook.to_csv(wv.tradebook_path, index=False)
     else:
+        print("Algo Started")
         wv.algo_status = True
 
+@socket.on("enctoken")
+def token(msg):
+    wv.kite = KiteApp(enctoken=msg)
 
 @socket.on('liveMode')
 def algo_status(msg):
