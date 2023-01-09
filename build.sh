@@ -1,5 +1,6 @@
 pip install -r requirements.txt
-sudo dpkg -i remote-syslog2_0.21_amd64.deb
-cp ./log_files.ymal /etc
-remote_syslog -c /etc/log_files.yml
-
+sudo remote_syslog \
+  -p 23374 --tls \
+  -d logs.papertrailapp.com \
+  --pid-file=/var/run/remote_syslog.pid \
+  /tmp/file.log
