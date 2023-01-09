@@ -3,21 +3,16 @@ import math
 import pandas as pd
 import numpy as np
 from datetime import datetime, date, timedelta
-
-from engineio import asyncio_socket
 from finta import TA as ta
 import calendar
-from os import environ, symlink
 import time
 import threading
-import requests
-from urllib.parse import urlparse, parse_qs
 from kite_trade import *
 from flask import Flask, request, render_template, session, redirect
 from flask_socketio import SocketIO
-# from flask_lt import run_with_lt
 from collections import Counter
-import logging
+from dateutil.tz import gettz
+
 import logging.handlers
 logging.basicConfig(level=logging.INFO,handlers=[logging.StreamHandler()])
 _logger = logging.getLogger('algo_log')
@@ -229,7 +224,7 @@ class waveAlgo():
             buy_sell_signal['ready_pe'] = (buy_sell_signal['prev_close'].tail(1).values[0] > ltp and is_short and abs(
                 buy_sell_signal['wtdiff'].tail(1).values[0]) > 2)
 
-            _logger.info(buy_sell_signal.tail(1).to_string(), self.actual_profit)
+            _logger.info(f"{buy_sell_signal.tail(1).to_string()}, f{self.actual_profit}")
             _logger.info("============================")
             t = self.tradebook.query(f"symbol == '{old_symbol}' and side == 'PE' and unsubscribe != False")
             if not t.empty:
@@ -310,8 +305,8 @@ class waveAlgo():
     def _place_order(self):
         if not self.algo_status:
             return
-        # if not (datetime.now().strftime('%H:%M') > '09:29'):
-        #     return
+        if not (datetime.now(tz=gettz('Asia/Kolkata')).strftime('%H:%M') > '09:29'):
+            return
         self._update_ltp()
         for symbol in ["NIFTY", "BANKNIFTY"]:
             is_valid_ema, side = self._get_ema_values(symbol)
