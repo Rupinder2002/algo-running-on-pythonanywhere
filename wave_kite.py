@@ -19,18 +19,9 @@ from flask_socketio import SocketIO
 from collections import Counter
 import logging
 import logging.handlers
-
+logging.basicConfig(filename="/tmp/file.log", filemode="a", level=logging.INFO)
 _logger = logging.getLogger('algo_log')
-_logger.setLevel(logging.INFO)
-
-#add handler to the logger
-handler = logging.handlers.SysLogHandler('/dev/log')
-
-#add formatter to the handler
-formatter = logging.Formatter('"%(name)s":"%(message)s"')
-
-handler.formatter = formatter
-_logger.addHandler(handler)
+_logger.info("test")
 
 app = Flask(__name__, template_folder='.')
 socket = SocketIO(app, ping_timeout=5, ping_interval=5, cors_allowed_origins="*", async_mode='gevent')

@@ -1,0 +1,7 @@
+files: 
+  - /tmp/file.log
+destination:
+  host: logs2.papertrailapp.com
+  port: 32860
+  protocol: tls
+pid_file: /var/run/remote_syslog.pid
