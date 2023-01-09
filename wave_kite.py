@@ -310,8 +310,8 @@ class waveAlgo():
     def _place_order(self):
         if not self.algo_status:
             return
-        if not (datetime.now().strftime('%H:%M') > '09:29'):
-            return
+        # if not (datetime.now().strftime('%H:%M') > '09:29'):
+        #     return
         self._update_ltp()
         for symbol in ["NIFTY", "BANKNIFTY"]:
             is_valid_ema, side = self._get_ema_values(symbol)
