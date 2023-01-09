@@ -24,7 +24,7 @@ _logger = logging.getLogger('algo_log')
 _logger.setLevel(logging.INFO)
 
 #add handler to the logger
-handler = logging.handlers.SysLogHandler()
+handler = logging.handlers.SysLogHandler('/dev/log')
 
 #add formatter to the handler
 formatter = logging.Formatter('"%(name)s":"%(message)s"')
