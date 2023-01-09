@@ -62,7 +62,7 @@ class waveAlgo():
         self._setup_tradebook()
 
         threading.Thread(target=self.refresh).start()
-        threading.Thread(target=self.temp_update_ltp).start()
+        #threading.Thread(target=self.temp_update_ltp).start()
 
     def temp_update_ltp(self):
         starttime = time.time()
