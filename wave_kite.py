@@ -18,7 +18,19 @@ from flask_socketio import SocketIO
 # from flask_lt import run_with_lt
 from collections import Counter
 import logging
-_logger = logging.getLogger("algo_log")
+import logging.handlers
+
+_logger = logging.getLogger('algo_log')
+_logger.setLevel(logging.INFO)
+
+#add handler to the logger
+handler = logging.handlers.SysLogHandler('/dev/log')
+
+#add formatter to the handler
+formatter = logging.Formatter('"%(name)s":"%(message)s"')
+
+handler.formatter = formatter
+_logger.addHandler(handler)
 
 app = Flask(__name__, template_folder='.')
 socket = SocketIO(app, ping_timeout=5, ping_interval=5, cors_allowed_origins="*", async_mode='gevent')
@@ -51,7 +63,7 @@ class waveAlgo():
 
         self.funds = 15000
         self.target_profit = 2000
-        self.kite_order = False;
+        self.kite_order = False
         self.resolution = 15
         self.wto_diff = []
         next_expiry = get_next_weekday(date.today().strftime("%Y-%m-%d"), 3)
@@ -65,7 +77,7 @@ class waveAlgo():
         self._setup_tradebook()
 
         threading.Thread(target=self.refresh).start()
-        threading.Thread(target=self.temp_update_ltp).start()
+        # threading.Thread(target=self.temp_update_ltp).start()
 
     def temp_update_ltp(self):
         starttime = time.time()
