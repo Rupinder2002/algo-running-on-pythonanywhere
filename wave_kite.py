@@ -500,9 +500,10 @@ def data(msg):
     return socket.emit("message", res, broadcast=True)
 
 
-try:
-    socket.run(app, host='0.0.0.0')
-except KeyboardInterrupt:
-    wv.tradebook.to_csv(wv.tradebook_path, index=False)
-finally:
-    wv.tradebook.to_csv(wv.tradebook_path, index=False)
+if __name__ == "__main__":
+    try:
+        socket.run(app, host='0.0.0.0')
+    except KeyboardInterrupt:
+        wv.tradebook.to_csv(wv.tradebook_path, index=False)
+    finally:
+        wv.tradebook.to_csv(wv.tradebook_path, index=False)
