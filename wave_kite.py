@@ -14,7 +14,7 @@ from collections import Counter
 from dateutil.tz import gettz
 
 import logging.handlers
-logging.basicConfig(level=logging.INFO,handlers=[logging.StreamHandler()])
+logging.basicConfig(level=logging.INFO,handlers=[logging.StreamHandler()], format="%(message)s")
 _logger = logging.getLogger('algo_log')
 
 app = Flask(__name__, template_folder='.')
@@ -62,7 +62,7 @@ class waveAlgo():
         self._setup_tradebook()
 
         threading.Thread(target=self.refresh).start()
-        # threading.Thread(target=self.temp_update_ltp).start()
+        threading.Thread(target=self.temp_update_ltp).start()
 
     def temp_update_ltp(self):
         starttime = time.time()
@@ -70,12 +70,12 @@ class waveAlgo():
             try:
                 tradebook = self.tradebook[
                     self.tradebook['orderId'].map(
-                        lambda x: str(x).startswith('NFO'))]  # & self.tradebook['unsubscribe']]
+                        lambda x: str(x).startswith('NFO')  and not str(x).startswith('NFO:Profit'))]  # & self.tradebook['unsubscribe']]
                 if not tradebook.empty:
                     tradebook = tradebook.loc[random.choice(list(tradebook.index.values))]
+                    ltp = tradebook['ltp'] or 0
                     self._update_ltp(
-                        {tradebook['orderId']: {"symbol": tradebook['orderId'], "last_price": random.randint(
-                            tradebook['ltp'] - 5, tradebook['ltp'] + 5)}})
+                        {tradebook['orderId']: {"symbol": tradebook['orderId'], "last_price": random.randint(ltp - 5, ltp + 5)}})
             finally:
                 time.sleep(1 - ((time.time() - starttime) % 1))
 
@@ -224,7 +224,7 @@ class waveAlgo():
             buy_sell_signal['ready_pe'] = (buy_sell_signal['prev_close'].tail(1).values[0] > ltp and is_short and abs(
                 buy_sell_signal['wtdiff'].tail(1).values[0]) > 2)
 
-            _logger.info(f"{buy_sell_signal.tail(1).to_string()}, f{self.actual_profit}")
+            _logger.info(f"{buy_sell_signal.tail(1).to_string()} {self.actual_profit}")
             _logger.info("============================")
             t = self.tradebook.query(f"symbol == '{old_symbol}' and side == 'PE' and unsubscribe != False")
             if not t.empty:
