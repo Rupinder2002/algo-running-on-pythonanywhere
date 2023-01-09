@@ -17,6 +17,8 @@ from flask import Flask, request, render_template, session, redirect
 from flask_socketio import SocketIO
 # from flask_lt import run_with_lt
 from collections import Counter
+import logging
+_logger = logging.getLogger("algo_log")
 
 app = Flask(__name__, template_folder='.')
 socket = SocketIO(app, ping_timeout=5, ping_interval=5, cors_allowed_origins="*", async_mode='gevent')
@@ -90,7 +92,7 @@ class waveAlgo():
                                                'remark',
                                                'unsubscribe', 'entry_time', 'exit_time',
                                                'remaining_balance', 'kite_order'])
-        print(
+        _logger.info(
             f"Run This in Powershell For LogBook\n===============\nGet-Content -Path {self.tradebook_path.replace('csv', 'log')} -Wait")
         if not os.path.exists(self.path):
             os.makedirs(self.path)
@@ -109,14 +111,14 @@ class waveAlgo():
                 self.tradebook['orderId'].map(
                     lambda x: str(x).startswith('NFO:') and not str(x).startswith('NFO:Profit')) &
                 self.tradebook["kite_order"] != False]['profit_loss'].sum()
-            print(f"Current Profit:{self.actual_profit}\n Fyers Profit: {fyers_profit}\n")
+            _logger.info(f"Current Profit:{self.actual_profit}\n Fyers Profit: {fyers_profit}\n")
             tradebook = self.tradebook[
                 self.tradebook['orderId'].map(lambda x: str(x).startswith('NFO')) & self.tradebook['unsubscribe']]
             self.symbols = list(tradebook['orderId'].values)
             self.balance = self._calculate_balance()
-            print(f"Remaining Balance: {self.balance}\n")
+            _logger.info(f"Remaining Balance: {self.balance}\n")
             if self.kite_order and fyers_profit >= self.target_profit:
-                print(f"Switiching to Papertrade only as Target profit is achived")
+                _logger.info(f"Switiching to Papertrade only as Target profit is achived")
                 self.kite_order = False
                 socket.emit('connect', [wv.algo_status, wv.kite_order])
 
@@ -140,7 +142,7 @@ class waveAlgo():
                 pass
             finally:
                 pass
-                print(f"Refreshed at {datetime.now().strftime('%H:%M:%S')}")
+                _logger.info(f"Refreshed at {datetime.now().strftime('%H:%M:%S')}")
                 time.sleep(2 - ((time.time() - starttime) % 2))
 
     def _get_wto(self, symbol):
@@ -225,8 +227,8 @@ class waveAlgo():
             buy_sell_signal['ready_pe'] = (buy_sell_signal['prev_close'].tail(1).values[0] > ltp and is_short and abs(
                 buy_sell_signal['wtdiff'].tail(1).values[0]) > 2)
 
-            print(buy_sell_signal.tail(1).to_string(), self.actual_profit)
-            print("============================")
+            _logger.info(buy_sell_signal.tail(1).to_string(), self.actual_profit)
+            _logger.info("============================")
             t = self.tradebook.query(f"symbol == '{old_symbol}' and side == 'PE' and unsubscribe != False")
             if not t.empty:
                 for index, row in t.iterrows():
@@ -257,7 +259,7 @@ class waveAlgo():
                 return False, False
 
         except Exception as e:
-            print(e)
+            _logger.info(e)
             return False, False
 
     def _getStrike(self, ltp, side, qty):
@@ -286,7 +288,7 @@ class waveAlgo():
             if not last_exit.empty and not last_exit.isna().bool() and not (datetime.now().time() > (
                     datetime.min + math.ceil(
                 (datetime.strptime(last_exit.values[0], "%H:%M:%S") - datetime.min) / delta) * delta).time()):
-                print('exited')
+                _logger.info('exited')
                 return False, False, False
             delta = timedelta(minutes=15)
             sl_order = self.tradebook.query(f"symbol == '{symbol}' and side == '{side}' and remark == 'Stop Loss Hit'")[
@@ -294,12 +296,12 @@ class waveAlgo():
             if not sl_order.empty and not sl_order.isna().bool() and not (datetime.now().time() > (
                     datetime.min + math.ceil(
                 (datetime.strptime(sl_order.values[0], "%H:%M:%S") - datetime.min) / delta) * delta).time()):
-                print("wait for next candle")
+                _logger.info("wait for next candle")
                 return False, False, False
             return strikePrice, orderId, side
         except Exception as e:
-            print(e)
-            print(self.tradebook.query(f"symbol == '{symbol}' and side == '{side}' and remark == 'Stop Loss Hit'")[
+            _logger.info(e)
+            _logger.info(self.tradebook.query(f"symbol == '{symbol}' and side == '{side}' and remark == 'Stop Loss Hit'")[
                       'exit_time'].tail(1))
             return False, False, False
 
@@ -346,23 +348,23 @@ class waveAlgo():
                 vals['kite_order'] = False
                 # balance = self.nifty_balance if symbol == "NIFTY" else self.bnnifty_balance
                 cur_balance = self._calculate_balance()
-                print(cur_balance)
+                _logger.info(cur_balance)
                 balance = 15000 if cur_balance > 15000 else cur_balance
                 if ((vals['investment'] + 200) < balance):
                     self.balance -= vals['investment']
                     self.symbols.append(orderId)
                     if self.kite_order:
                         try:
-                            print(
+                            _logger.info(
                                 f"Placing kite order {orderId} with limit price {ltp} qty {qty} stoploss {stoploss} target {vals['target']}")
                             vals['kite_order'] = True
                             f_orderId = self._getOrderData(orderId, "B", qty)
-                            print(f_orderId)
+                            _logger.info(f_orderId)
                         except Exception as e:
-                            print(e)
+                            _logger.info(e)
                     self.tradebook = self.tradebook.append([vals], ignore_index=True)
                 else:
-                    print(f"Not Enough balance {balance} {orderId} {qty} {ltp}")
+                    _logger.info(f"Not Enough balance {balance} {orderId} {qty} {ltp}")
 
     def _getOrderData(self, order, signal, qty):
         transaction = self.kite.TRANSACTION_TYPE_BUY if signal == "B" else self.kite.TRANSACTION_TYPE_SELL
@@ -382,16 +384,16 @@ class waveAlgo():
                     orderId = self.tradebook.loc[index, 'orderId']
                     qty = self.tradebook.loc[index, 'qty']
                     f_orderId = self._getOrderData(orderId, "S", qty)
-                    print(f_orderId)
+                    _logger.info(f_orderId)
                 self.symbols.remove(self.tradebook.loc[index, 'orderId'])
                 self.tradebook.loc[index, 'qty'] = 0
                 self.tradebook.loc[index, 'exit_price'] = ltp
-                # print(f"\n Remaining Balance\n {self.balance}")
+                # _logger.info(f"\n Remaining Balance\n {self.balance}")
                 self.tradebook.loc[index, 'remark'] = message
                 self.tradebook.loc[index, 'unsubscribe'] = False
                 self.tradebook.loc[index, 'exit_time'] = datetime.now().strftime("%H:%M:%S")
         except Exception as e:
-            print(f"ERROR while orderupdate {e}")
+            _logger.info(f"ERROR while orderupdate {e}")
         finally:
             self.balance = self._calculate_balance()
             self.tradebook.to_csv(self.tradebook_path, index=False)
@@ -409,7 +411,7 @@ class waveAlgo():
         for symbol, ltp in ltp_symbols.items():
             ltp = ltp['last_price']
             if self.kite_order and self.actual_profit >= self.target_profit:
-                print("Switiching to Papertrade only as Target profit is achived")
+                _logger.info("Switiching to Papertrade only as Target profit is achived")
                 self.exit_all_position()
             for index, row in self.tradebook.query(
                     f"unsubscribe != False and orderId == '{symbol}'").iterrows():
@@ -456,37 +458,37 @@ def html_table():
 
 @socket.on("connect")
 def connect(msg):
-    print(msg)
+    _logger.info(msg)
     socket.emit('connect', [wv.algo_status, wv.kite_order])
 
 @socket.on('clientEvent')
 def algo_status(msg):
     if msg == "stop":
-        print("Algo Stopped")
+        _logger.info("Algo Stopped")
         wv.algo_status = False
         wv.tradebook.to_csv(wv.tradebook_path, index=False)
     else:
-        print("Algo Started")
+        _logger.info("Algo Started")
         wv.algo_status = True
 
 @socket.on("enctoken")
 def token(msg):
-    print(msg)
+    _logger.info(msg)
     wv.kite = KiteApp(enctoken=str(msg))
 
 @socket.on('liveMode')
 def algo_status(msg):
     if msg != "live":
-        print("Switched to Live mode")
+        _logger.info("Switched to Live mode")
         wv.kite_order = True
     else:
-        print("Switched to Paper mode")
+        _logger.info("Switched to Paper mode")
         wv.kite_order = False
 
 
 @socket.on('exit_all')
 def algo_status(msg):
-    print("Closed all position")
+    _logger.info("Closed all position")
     wv.exit_all_position()
 
 
