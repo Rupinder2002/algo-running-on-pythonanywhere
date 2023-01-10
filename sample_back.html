@@ -68,9 +68,7 @@
                     $("#content").html(response)
                 })
             }, 2000)
-            setInterval(function () {
-                $.get('/refresh')
-            }, 2000)
+
             setInterval(function () {
                 $.get('/save')
             }, 60000)

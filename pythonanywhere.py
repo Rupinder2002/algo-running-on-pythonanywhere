@@ -11,7 +11,7 @@ from kite_trade import *
 from flask import Flask, request, render_template, session, redirect
 from collections import Counter
 from dateutil.tz import gettz
-
+import schedule
 import logging.handlers
 
 logging.basicConfig(level=logging.INFO, filename="algo_log.log",filemode="a", format="%(message)s")
@@ -452,7 +452,11 @@ class waveAlgo():
 
 
 wv = waveAlgo()
-
+schedule.every(2).seconds.do(wv.refresh)
+def run_schedule():
+    while 1:
+        schedule.run_pending()
+        time.sleep(1)
 
 @app.route('/', methods=("POST", "GET"))
 def html_table():
@@ -517,12 +521,6 @@ def data():
     # time.sleep(1)
     return res
 
-@app.route('/refresh')
-def refresh_api():
-    t = threading.Thread(target=wv.refresh)
-    t.start()
-    t.join()
-    return "", 200
 
 @app.route('/save')
 def save():
@@ -531,7 +529,9 @@ def save():
 
 if __name__ == "__main__":
     try:
-        app.run(host='0.0.0.0')
+        threading.Thread(target=run_schedule).start()
+        app.run(host='0.0.0.0',use_reloader=False)
+
     except KeyboardInterrupt:
         wv.tradebook.to_csv(wv.tradebook_path, index=False)
     finally:
