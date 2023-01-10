@@ -57,7 +57,7 @@ class waveAlgo():
         self.kite = KiteApp(enctoken="")
         self._setup_tradebook()
 
-        threading.Thread(target=self.refresh()).start()
+        threading.Thread(target=self.refresh, daemon=True).start()
         # threading.Thread(target=self.temp_update_ltp).start()
 
     def run_scheduler(self):
@@ -142,7 +142,7 @@ class waveAlgo():
                 pass
                 _logger.info(f"Refreshed at {datetime.now(tz=gettz('Asia/Kolkata')).strftime('%H:%M:%S')}")
                 time.sleep(2 - ((time.time() - starttime) % 2))
-                
+
     def _get_wto(self, symbol):
         ltp = self.kite.quote(symbol).get(symbol)
         instrument_token = ltp.get('instrument_token')
