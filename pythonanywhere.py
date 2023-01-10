@@ -59,7 +59,6 @@ class waveAlgo():
         self.kite = KiteApp(enctoken="")
         self._setup_tradebook()
 
-        self.refresh()
         # threading.Thread(target=self.temp_update_ltp).start()
 
     def temp_update_ltp(self):
@@ -453,8 +452,9 @@ class waveAlgo():
 
 wv = waveAlgo()
 schedule.every(2).seconds.do(wv.refresh)
-def run_schedule():
-    while 1:
+
+def run_shedular():
+    while True:
         schedule.run_pending()
         time.sleep(1)
 
@@ -529,9 +529,8 @@ def save():
 
 if __name__ == "__main__":
     try:
-        threading.Thread(target=run_schedule).start()
-        app.run(host='0.0.0.0',use_reloader=False)
-
+        threading.Thread(target=run_shedular, daemon=True).start()
+        app.run(host='0.0.0.0')
     except KeyboardInterrupt:
         wv.tradebook.to_csv(wv.tradebook_path, index=False)
     finally:
