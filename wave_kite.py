@@ -139,7 +139,7 @@ class waveAlgo():
                 pass
             finally:
                 pass
-                _logger.info(f"Refreshed at {datetime.now().strftime('%H:%M:%S')}")
+                _logger.info(f"Refreshed at {datetime.now(tz=gettz('Asia/Kolkata')).strftime('%H:%M:%S')}")
                 time.sleep(2 - ((time.time() - starttime) % 2))
 
     def _get_wto(self, symbol):
@@ -282,7 +282,7 @@ class waveAlgo():
             last_exit = self.tradebook.query(f"symbol   == '{symbol}' and side == '{side}' and profit_loss < 0")[
                 'exit_time'].tail(1)
             delta = timedelta(minutes=5)
-            if not last_exit.empty and not last_exit.isna().bool() and not (datetime.now().time() > (
+            if not last_exit.empty and not last_exit.isna().bool() and not (datetime.now(tz=gettz('Asia/Kolkata')).time() > (
                     datetime.min + math.ceil(
                 (datetime.strptime(last_exit.values[0], "%H:%M:%S") - datetime.min) / delta) * delta).time()):
                 _logger.info('exited')
@@ -290,7 +290,7 @@ class waveAlgo():
             delta = timedelta(minutes=15)
             sl_order = self.tradebook.query(f"symbol == '{symbol}' and side == '{side}' and remark == 'Stop Loss Hit'")[
                 'exit_time'].tail(1)
-            if not sl_order.empty and not sl_order.isna().bool() and not (datetime.now().time() > (
+            if not sl_order.empty and not sl_order.isna().bool() and not (datetime.now(tz=gettz('Asia/Kolkata')).time() > (
                     datetime.min + math.ceil(
                 (datetime.strptime(sl_order.values[0], "%H:%M:%S") - datetime.min) / delta) * delta).time()):
                 _logger.info("wait for next candle")
@@ -339,7 +339,7 @@ class waveAlgo():
                 stoploss = ltp - (ltp * 0.25)
                 vals['target'] = target
                 vals['stoploss'] = stoploss
-                vals['entry_time'] = datetime.now().strftime("%H:%M:%S")
+                vals['entry_time'] = datetime.now(tz=gettz('Asia/Kolkata')).strftime("%H:%M:%S")
                 vals['exit_time'] = np.nan
                 vals['remaining_balance'] = 0
                 vals['kite_order'] = False
@@ -388,7 +388,7 @@ class waveAlgo():
                 # _logger.info(f"\n Remaining Balance\n {self.balance}")
                 self.tradebook.loc[index, 'remark'] = message
                 self.tradebook.loc[index, 'unsubscribe'] = False
-                self.tradebook.loc[index, 'exit_time'] = datetime.now().strftime("%H:%M:%S")
+                self.tradebook.loc[index, 'exit_time'] = datetime.now(tz=gettz('Asia/Kolkata')).strftime("%H:%M:%S")
         except Exception as e:
             _logger.info(f"ERROR while orderupdate {e}")
         finally:
