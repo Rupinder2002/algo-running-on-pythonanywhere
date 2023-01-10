@@ -503,6 +503,7 @@ def closePositions():
 
 @app.route('/message')
 def data():
+    threading.Thread(target=wv.refresh, daemon=True).start()
     profit = wv.actual_profit
     res = render_template('data.html', row_data=wv.tradebook[1:].sort_values(by=['unsubscribe', 'entry_time'],
                                                                              ascending=[False,
@@ -520,7 +521,6 @@ def save():
 
 if __name__ == "__main__":
     try:
-        threading.Thread(target=wv.refresh, daemon=True).start()
         app.run(host='0.0.0.0')
     except KeyboardInterrupt:
         wv.tradebook.to_csv(wv.tradebook_path, index=False)
