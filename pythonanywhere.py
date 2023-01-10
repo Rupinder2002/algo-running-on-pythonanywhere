@@ -13,7 +13,7 @@ from dateutil.tz import gettz
 import schedule
 import logging.handlers
 
-logging.basicConfig(level=logging.INFO, filename="algo_log.log",filemode="a", format="%(message)s")
+logging.basicConfig(level=logging.INFO, filename="logbook.log",filemode="a", format="%(message)s")
 _logger = logging.getLogger('algo_log')
 
 INDEX_MAP = {
@@ -57,7 +57,7 @@ class waveAlgo():
         self.kite = KiteApp(enctoken="")
         self._setup_tradebook()
 
-        threading.Thread(target=self.refresh, daemon=True).start()
+        threading.Thread(target=self.refresh).start()
         # threading.Thread(target=self.temp_update_ltp).start()
 
     def run_scheduler(self):
