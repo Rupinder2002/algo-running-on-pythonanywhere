@@ -49,7 +49,6 @@
     <script>
         $(document).ready(function () {
             $.get('/connect').then(msg => {
-                console.log(msg)
                 if (msg) {
                     if (msg[0]) {
                         $("#algo_status").bootstrapToggle('on')
@@ -63,9 +62,11 @@
                     }
                 }
             });
-            $.get('/message').then(response => {
-                $("#content").html(response)
-            });
+            setInterval(function () {
+                $.get('/message').then(response => {
+                    $("#content").html(response)
+                })
+            }, 1000)
             $("#algo_status").on('change', function () { // on change of state
                 if (this.checked) // if changed state is "CHECKED"
                 {

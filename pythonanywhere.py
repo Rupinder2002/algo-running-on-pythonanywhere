@@ -14,7 +14,7 @@ from dateutil.tz import gettz
 
 import logging.handlers
 
-logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler()], format="%(message)s")
+logging.basicConfig(level=logging.INFO, filename="algo_log.log",filemode="a", format="%(message)s")
 _logger = logging.getLogger('algo_log')
 
 app = Flask(__name__, template_folder='.')
