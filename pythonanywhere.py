@@ -127,21 +127,17 @@ class waveAlgo():
         return (self.funds + self.actual_profit) - self.tradebook.query("unsubscribe == True").investment.sum()
 
     def refresh(self):
-        # threading.Thread(target=self._place_order).start()
-        self._place_order()
-        _logger.info(f"Refreshed at {datetime.now(tz=gettz('Asia/Kolkata')).strftime('%H:%M:%S')}")
-        # starttime = time.time()
-        # while True:
-        #     try:
-        #         # t = threading.Thread(target=self._place_order)
-        #         # t.start()
-        #         self._place_order()
-        #     except:
-        #         pass
-        #     finally:
-        #         pass
-        #         _logger.info(f"Refreshed at {datetime.now(tz=gettz('Asia/Kolkata')).strftime('%H:%M:%S')}")
-        #         time.sleep(2 - ((time.time() - starttime) % 2))
+        starttime = time.time()
+        while True:
+            try:
+                t = threading.Thread(target=self._place_order)
+                t.start()
+            except:
+                pass
+            finally:
+                pass
+                _logger.info(f"Refreshed at {datetime.now(tz=gettz('Asia/Kolkata')).strftime('%H:%M:%S')}")
+                time.sleep(2 - ((time.time() - starttime) % 2))
 
     def _get_wto(self, symbol):
         ltp = self.kite.quote(symbol).get(symbol)
@@ -451,12 +447,6 @@ class waveAlgo():
 
 
 wv = waveAlgo()
-schedule.every(2).seconds.do(wv.refresh)
-
-def run_shedular():
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
 
 @app.route('/', methods=("POST", "GET"))
 def html_table():
@@ -527,9 +517,10 @@ def save():
     wv.tradebook.to_csv(wv.tradebook_path, index=False)
     return "", 200
 
+
 if __name__ == "__main__":
     try:
-        threading.Thread(target=run_shedular, daemon=True).start()
+        threading.Thread(target=wv.refresh, daemon=True).start()
         app.run(host='0.0.0.0')
     except KeyboardInterrupt:
         wv.tradebook.to_csv(wv.tradebook_path, index=False)
