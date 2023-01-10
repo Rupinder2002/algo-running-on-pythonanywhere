@@ -2,3 +2,6 @@ pandas
 finta
 fyers_api
 flask
+flask_socketio
+gevent
+gevent-websocket
