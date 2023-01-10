@@ -59,7 +59,7 @@ class waveAlgo():
         self.kite = KiteApp(enctoken="")
         self._setup_tradebook()
 
-        threading.Thread(target=self.refresh).start()
+        self.refresh()
         # threading.Thread(target=self.temp_update_ltp).start()
 
     def temp_update_ltp(self):
@@ -129,17 +129,20 @@ class waveAlgo():
 
     def refresh(self):
         # threading.Thread(target=self._place_order).start()
-        starttime = time.time()
-        while True:
-            try:
-                t = threading.Thread(target=self._place_order)
-                t.start()
-            except:
-                pass
-            finally:
-                pass
-                _logger.info(f"Refreshed at {datetime.now(tz=gettz('Asia/Kolkata')).strftime('%H:%M:%S')}")
-                time.sleep(2 - ((time.time() - starttime) % 2))
+        self._place_order()
+        _logger.info(f"Refreshed at {datetime.now(tz=gettz('Asia/Kolkata')).strftime('%H:%M:%S')}")
+        # starttime = time.time()
+        # while True:
+        #     try:
+        #         # t = threading.Thread(target=self._place_order)
+        #         # t.start()
+        #         self._place_order()
+        #     except:
+        #         pass
+        #     finally:
+        #         pass
+        #         _logger.info(f"Refreshed at {datetime.now(tz=gettz('Asia/Kolkata')).strftime('%H:%M:%S')}")
+        #         time.sleep(2 - ((time.time() - starttime) % 2))
 
     def _get_wto(self, symbol):
         ltp = self.kite.quote(symbol).get(symbol)
@@ -453,7 +456,7 @@ wv = waveAlgo()
 
 @app.route('/', methods=("POST", "GET"))
 def html_table():
-    return render_template('sample.html', row_data=wv.tradebook.values.tolist(), algo_status=wv.algo_status)
+    return render_template('sample_back.html', row_data=wv.tradebook.values.tolist(), algo_status=wv.algo_status)
 
 
 @app.route("/connect")
@@ -506,6 +509,7 @@ def closePositions():
 
 @app.route('/message')
 def data():
+    wv.refresh()
     profit = wv.actual_profit
     res = render_template('data.html', row_data=wv.tradebook[1:].sort_values(by=['unsubscribe', 'entry_time'],
                                                                              ascending=[False,
@@ -517,7 +521,7 @@ def data():
 
 if __name__ == "__main__":
     try:
-        app.run()
+        app.run(host='0.0.0.0')
     except KeyboardInterrupt:
         wv.tradebook.to_csv(wv.tradebook_path, index=False)
     finally:
