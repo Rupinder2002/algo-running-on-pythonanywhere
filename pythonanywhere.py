@@ -522,6 +522,11 @@ def refresh_api():
     threading.Thread(target=wv.refresh).start()
     return "", 200
 
+@app.route('/save')
+def save():
+    wv.tradebook.to_csv(wv.tradebook_path, index=False)
+    return "", 200
+
 if __name__ == "__main__":
     try:
         app.run(host='0.0.0.0')

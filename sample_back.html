@@ -67,10 +67,13 @@
                 $.get('/message').then(response => {
                     $("#content").html(response)
                 })
-            }, 1000)
+            }, 2000)
             setInterval(function () {
                 $.get('/refresh')
             }, 2000)
+            setInterval(function () {
+                $.get('/save')
+            }, 60000)
             $("#algo_status").on('change', function () { // on change of state
                 if (this.checked) // if changed state is "CHECKED"
                 {
