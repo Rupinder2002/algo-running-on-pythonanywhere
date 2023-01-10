@@ -56,9 +56,8 @@ class waveAlgo():
         # enctoken = input("Enter Token: ")
         self.kite = KiteApp(enctoken="")
         self._setup_tradebook()
-        schedule.every(2).seconds.do(self.refresh)
 
-        threading.Thread(target=self.run_scheduler, daemon=True).start()
+        threading.Thread(target=self.refresh()).start()
         # threading.Thread(target=self.temp_update_ltp).start()
 
     def run_scheduler(self):
@@ -132,9 +131,18 @@ class waveAlgo():
         return (self.funds + self.actual_profit) - self.tradebook.query("unsubscribe == True").investment.sum()
 
     def refresh(self):
-        threading.Thread(target=self._place_order).start()
-        _logger.info(f"Refreshed at {datetime.now(tz=gettz('Asia/Kolkata')).strftime('%H:%M:%S')}")
-
+        starttime = time.time()
+        while True:
+            try:
+                t = threading.Thread(target=self._place_order)
+                t.start()
+            except:
+                pass
+            finally:
+                pass
+                _logger.info(f"Refreshed at {datetime.now(tz=gettz('Asia/Kolkata')).strftime('%H:%M:%S')}")
+                time.sleep(2 - ((time.time() - starttime) % 2))
+                
     def _get_wto(self, symbol):
         ltp = self.kite.quote(symbol).get(symbol)
         instrument_token = ltp.get('instrument_token')
