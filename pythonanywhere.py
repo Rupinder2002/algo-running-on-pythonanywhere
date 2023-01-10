@@ -117,7 +117,6 @@ class waveAlgo():
             if self.kite_order and fyers_profit >= self.target_profit:
                 _logger.info(f"Switiching to Papertrade only as Target profit is achived")
                 self.kite_order = False
-                socket.emit('connect', [wv.algo_status, wv.kite_order])
 
     def _calculate_balance(self):
         self.actual_profit = self.tradebook[
@@ -459,7 +458,7 @@ def html_table():
 
 @app.route("/connect")
 def connect():
-    return [wv.algo_status, wv.kite_order]
+    return (wv.algo_status, wv.kite_order)
 
 
 @app.route('/clientEvent', methods=("POST", "GET"))
