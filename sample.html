@@ -49,13 +49,14 @@
     <script>
         $(document).ready(function () {
             $.get('/connect').then(msg => {
+                console.log(msg)
                 if (msg) {
-                    if (msg[0]) {
+                    if (msg['algo_status']) {
                         $("#algo_status").bootstrapToggle('on')
                     } else {
                         $("#algo_status").bootstrapToggle('off')
                     }
-                    if (msg[1]) {
+                    if (msg['algo_mode']) {
                         $("#algo_mode").bootstrapToggle('on')
                     } else {
                         $("#algo_mode").bootstrapToggle('off')

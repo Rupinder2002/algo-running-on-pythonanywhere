@@ -458,7 +458,7 @@ def html_table():
 
 @app.route("/connect")
 def connect():
-    return (wv.algo_status, wv.kite_order)
+    return {"algo_status":wv.algo_status, "algo_mode": wv.kite_order}
 
 
 @app.route('/clientEvent', methods=("POST", "GET"))
