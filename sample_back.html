@@ -68,6 +68,9 @@
                     $("#content").html(response)
                 })
             }, 1000)
+            setInterval(function () {
+                $.get('/refresh')
+            }, 2000)
             $("#algo_status").on('change', function () { // on change of state
                 if (this.checked) // if changed state is "CHECKED"
                 {

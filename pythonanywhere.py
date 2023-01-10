@@ -475,7 +475,7 @@ def algo_status():
     else:
         _logger.info("Algo Started")
         wv.algo_status = True
-    return "True"
+    return "", 200
 
 
 @app.route("/enctoken", methods=("POST", "GET"))
@@ -484,7 +484,7 @@ def token():
     msg = data['enctoken'][0]
     _logger.info(msg)
     wv.kite = KiteApp(enctoken=str(msg))
-    return "True"
+    return "", 200
 
 
 @app.route('/liveMode', methods=("POST", "GET"))
@@ -497,19 +497,18 @@ def live_mode():
     else:
         _logger.info("Switched to Paper mode")
         wv.kite_order = False
-    return "True"
+    return "", 200
 
 
 @app.route('/exit_all')
 def closePositions():
     _logger.info("Closed all position")
     wv.exit_all_position()
-    return "True"
+    return "", 200
 
 
 @app.route('/message')
 def data():
-    wv.refresh()
     profit = wv.actual_profit
     res = render_template('data.html', row_data=wv.tradebook[1:].sort_values(by=['unsubscribe', 'entry_time'],
                                                                              ascending=[False,
@@ -518,6 +517,10 @@ def data():
     # time.sleep(1)
     return res
 
+@app.route('/refresh')
+def refresh_api():
+    threading.Thread(target=wv.refresh).start()
+    return "", 200
 
 if __name__ == "__main__":
     try:
