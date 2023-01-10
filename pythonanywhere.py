@@ -519,7 +519,9 @@ def data():
 
 @app.route('/refresh')
 def refresh_api():
-    threading.Thread(target=wv.refresh).start()
+    t = threading.Thread(target=wv.refresh)
+    t.start()
+    t.join()
     return "", 200
 
 @app.route('/save')
