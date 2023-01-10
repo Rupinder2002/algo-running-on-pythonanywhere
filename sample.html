@@ -31,8 +31,9 @@
             color: red;
             font-weight: strong
         }
-        .row{
-            padding:5px !important;
+
+        .row {
+            padding: 5px !important;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"
@@ -47,53 +48,47 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <script>
         $(document).ready(function () {
-            const socket = io(window.host, {
-                // WARNING: in that case, there is no fallback to long-polling
-                transports: ["websocket"] // or [ "websocket", "polling" ] (the order matters)
-            });
-            socket.on('connect', function (msg) {
-                socket.send('get')
+            $.get('/connect').then(msg => {
                 console.log(msg)
-                if(msg){
-                    if(msg[0]){
+                if (msg) {
+                    if (msg[0]) {
                         $("#algo_status").bootstrapToggle('on')
-                    }else{
+                    } else {
                         $("#algo_status").bootstrapToggle('off')
                     }
-                    if(msg[1]){
+                    if (msg[1]) {
                         $("#algo_mode").bootstrapToggle('on')
-                    }else{
+                    } else {
                         $("#algo_mode").bootstrapToggle('off')
                     }
                 }
             });
-            socket.on('message', function (response) {
-                socket.send('get')
+            $.get('/message').then(response => {
                 $("#content").html(response)
             });
             $("#algo_status").on('change', function () { // on change of state
                 if (this.checked) // if changed state is "CHECKED"
                 {
-                    socket.emit('clientEvent', 'start');
+                    $.post({url: '/clientEvent', data: {'algo_status': 'start'}})
                 } else {
-                    socket.emit('clientEvent', 'stop');
+                    $.post({url: '/clientEvent', data: {'algo_status': 'stop'}})
                 }
             })
             $("#algo_mode").on('change', function () { // on change of state
                 if (this.checked) // if changed state is "CHECKED"
                 {
-                    socket.emit('liveMode', 'paper');
+                    $.post({url: '/liveMode', data: {'algo_mode': 'live'}})
                 } else {
-                    socket.emit('liveMode', 'live');
+                    $.post({url: '/liveMode', data: {'algo_mode': 'paper'}})
                 }
             })
             $("#algo_mode").on('click', function () { // on change of state
-                socket.emit('exit_all', 'exit');
+                $.get('/exit_all')
             })
 
-            $("#submit").click(function(){
+            $("#submit").click(function () {
                 var enctoken = $("#enctoken").val()
-                socket.emit('enctoken', enctoken);
+                $.post({url: '/enctoken', data: {'enctoken': enctoken}})
             })
         });
 
@@ -104,7 +99,8 @@
     <div clas="container">
         <div class="row">
             <div class="col-lg-12">
-                <input type="button" id="exit_all" value="Exit All Position" class="btn btn-danger btn-sm" style="width:100%"/>
+                <input type="button" id="exit_all" value="Exit All Position" class="btn btn-danger btn-sm"
+                       style="width:100%"/>
             </div>
         </div>
         <div class="row">
