@@ -377,7 +377,8 @@ class waveAlgo():
     def _orderUpdate(self, index, order_status, message, ltp, symbol):
         try:
             if self.tradebook.loc[index, 'orderId'] in self.symbols:
-                if self.kite_order:
+
+                if self.tradebook.loc[index, 'unsubscribe'] and self.tradebook.loc[index, 'kite_order']:
                     orderId = self.tradebook.loc[index, 'orderId']
                     qty = self.tradebook.loc[index, 'qty']
                     f_orderId = self._getOrderData(orderId, "S", qty)
