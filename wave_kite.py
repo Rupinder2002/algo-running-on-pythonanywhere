@@ -12,6 +12,7 @@ from flask import Flask, request, render_template, session, redirect
 from flask_socketio import SocketIO
 from collections import Counter
 from dateutil.tz import gettz
+import json
 
 import logging.handlers
 logging.basicConfig(level=logging.INFO,handlers=[logging.StreamHandler()], format="%(message)s")
@@ -29,7 +30,24 @@ INDEX_MAP = {
 class waveAlgo():
 
     def __init__(self):
-        self.algo_status = False
+        self.config_path = os.path.join(os.getcwd(), 'config.json')
+        if not os.path.exists(self.config_path):
+            data = {
+                'enctoken':'',
+                'algo_status': False,
+                'kite_order': False,
+                'target_profit': 2000,
+                'funds': 15000
+            }
+            json_object = json.dumps(data, indent=4)
+
+            # Writing to sample.json
+            with open(self.config_path, 'w') as f:
+                f.write(json_object)
+        with open(self.config_path, 'r') as config:
+            self.config = json.load(config)
+
+        self.algo_status = self.config['algo_status']
 
         def check_last_expiry(day):
             month = calendar.monthcalendar(datetime.today().year, datetime.today().month)
@@ -46,9 +64,9 @@ class waveAlgo():
             t = timedelta((7 + weekday - d.weekday()) % 7)
             return (d + t)
 
-        self.funds = 15000
-        self.target_profit = 2000
-        self.kite_order = False
+        self.funds = self.config['funds']
+        self.target_profit = self.config['target_profit']
+        self.kite_order = self.config['kite_order']
         self.resolution = 15
         self.wto_diff = []
         next_expiry = get_next_weekday(date.today().strftime("%Y-%m-%d"), 3)
@@ -58,7 +76,7 @@ class waveAlgo():
             self.next_expiry = f"{next_expiry.strftime('%y')}{int(next_expiry.strftime('%b'))}"
 
         # enctoken = input("Enter Token: ")
-        self.kite = KiteApp(enctoken="")
+        self.kite = KiteApp(enctoken=self.config['enctoken'])
         self._setup_tradebook()
 
         threading.Thread(target=self.refresh).start()
@@ -468,11 +486,20 @@ def algo_status(msg):
     else:
         _logger.info("Algo Started")
         wv.algo_status = True
+    wv.config['algo_status'] = wv.algo_status
+    json_object = json.dumps(wv.config, indent=4)
+    with open(wv.config_path, 'w') as f:
+        f.write(json_object)
 
 @socket.on("enctoken")
 def token(msg):
     _logger.info(msg)
+    msg = msg.strip()
     wv.kite = KiteApp(enctoken=str(msg))
+    wv.config['enctoken'] = str(msg)
+    json_object = json.dumps(wv.config, indent=4)
+    with open(wv.config_path, 'w') as f:
+        f.write(json_object)
 
 @socket.on('liveMode')
 def algo_status(msg):
@@ -482,6 +509,10 @@ def algo_status(msg):
     else:
         _logger.info("Switched to Paper mode")
         wv.kite_order = False
+    wv.config['kite_order'] = wv.kite_order
+    json_object = json.dumps(wv.config, indent=4)
+    with open(wv.config_path, 'w') as f:
+        f.write(json_object)
 
 
 @socket.on('exit_all')
