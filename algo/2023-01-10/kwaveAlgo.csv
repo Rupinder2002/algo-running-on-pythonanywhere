@@ -1,0 +1,2 @@
+orderId,symbol,strikePrice,side,investment,buy_price,qty,stoploss,target,exit_price,ltp,profit_loss,remark,unsubscribe,entry_time,exit_time,remaining_balance,kite_order
+NFO:Profit,,,,,,,,,,,0,,False,23:59:59,,15000,False

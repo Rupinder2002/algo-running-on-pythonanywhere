@@ -49,6 +49,9 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <script>
         $(document).ready(function () {
+            setInterval(function () {
+                $.get('/save')
+            }, 60000)
             const socket = io(window.host, {
                 // WARNING: in that case, there is no fallback to long-polling
                 transports: ["websocket"] // or [ "websocket", "polling" ] (the order matters)
