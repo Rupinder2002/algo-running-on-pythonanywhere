@@ -406,11 +406,14 @@ class waveAlgo():
       if self.tradebook.query(
           f"symbol == '{symbol}' and unsubscribe != False").empty:
         print(orderId)
+        cur_balance = self._calculate_balance()
+        _logger.info(cur_balance)
+        balance = self.config[
+          'funds'] if cur_balance > self.config['funds'] else cur_balance
         ltp = self.kite.quote(orderId).get(orderId)['last_price']
-        no_of_lots = int(self.funds /
+        no_of_lots = int(cur_balance /
                          ((25 if symbol == "BANKNIFTY" else 50) * ltp))
-        qty = (25 if symbol == "BANKNIFTY" else
-               50) * no_of_lots  # \\(2 if symbol == "BANKNIFTY" else 1)
+        qty = (25 if symbol == "BANKNIFTY" else 50) * no_of_lots
         vals = {
           'orderId': orderId,
           "symbol": symbol,
@@ -436,11 +439,9 @@ class waveAlgo():
         vals['exit_time'] = np.nan
         vals['remaining_balance'] = 0
         vals['kite_order'] = False
+        print(f"Investment: {vals['investment']}, balance: {balance}")
         # balance = self.nifty_balance if symbol == "NIFTY" else self.bnnifty_balance
-        cur_balance = self._calculate_balance()
-        _logger.info(cur_balance)
-        balance = 15000 if cur_balance > 15000 else cur_balance
-        if ((vals['investment'] + 200) < balance):
+        if ((vals['investment']) < balance):
           self.balance -= vals['investment']
           self.symbols.append(orderId)
           if self.kite_order:
@@ -518,6 +519,7 @@ class waveAlgo():
         change_target_sl = 2  #(5 if row.symbol == "BANKNIFTY" else 2)
         pro_loss = round(
           (ltp * qty) - (self.tradebook.loc[index, 'buy_price'] * qty) - 60, 2)
+        print(ltp)
         # if pro_loss >= 1000:  # (2000 if row.symbol == "BANKNIFTY" else 1200):
 
         if ltp >= self.tradebook.loc[index, 'target']:
@@ -549,6 +551,7 @@ class waveAlgo():
         self.tradebook.loc[
           self.tradebook.query("orderId == 'NFO:Profit'").index,
           "remaining_balance"] = self.balance
+
     # tradebook.to_csv(self.tradebook_path, index=False)
 
 
