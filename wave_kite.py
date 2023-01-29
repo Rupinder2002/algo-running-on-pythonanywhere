@@ -82,15 +82,27 @@ class waveAlgo():
     print(next_expiry)
     if not check_last_expiry(next_expiry.day):
       self.next_expiry = f"{next_expiry.strftime('%y')}{int(next_expiry.strftime('%m'))}{next_expiry.strftime('%d')}"
+      last = False
     else:
       self.next_expiry = f"{next_expiry.strftime('%y')}{next_expiry.strftime('%b').upper()}"
+      last = True
 
     # enctoken = input("Enter Token: ")
     self.kite = KiteApp(enctoken=self.config['enctoken'])
+    self._setup_oi_data(next_expiry, last)
     self._setup_tradebook()
 
     threading.Thread(target=self.refresh).start()
     #threading.Thread(target=self.temp_update_ltp).start()
+
+  def _setup_oi_data(self, expiry, last):
+    instruments = self.kite.instruments("NFO")
+    oi_data = pd.DataFrame(instruments)
+    oi_data['expiry'] = oi_data['expiry'].map(lambda x: f"{x.strftime('%y')}{int(x.strftime('%m'))}")
+    expiry_filter = f"{expiry.strftime('%y')}{int(expiry.strftime('%m'))}"
+    self.ce_strike = oi_data.query(f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'CE' and expiry == '{expiry_filter}'")['tradingsymbol']
+    self.pe_strike = oi_data.query(f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'PE' and expiry == '{expiry_filter}'")[
+      'tradingsymbol']
 
   def temp_update_ltp(self):
     starttime = time.time()
@@ -191,6 +203,11 @@ class waveAlgo():
     ltp = self.kite.quote(symbol).get(symbol)
     instrument_token = ltp.get('instrument_token')
     ltp = ltp.get('last_price')
+    ce_dict = self.kite.quote(self.ce_strike.map(lambda x:f'NFO:{x}').values.tolist())
+    self.ce_oi = sum([v['oi'] for a,v in ce_dict.items()])
+    pe_dict = self.kite.quote(self.pe_strike.map(lambda x: f'NFO:{x}').values.tolist())
+    self.pe_oi = sum([v['oi'] for a, v in pe_dict.items()])
+    self.difference = abs(self.ce_oi - self.pe_oi)
     from_date = date.today() - timedelta(days=4)
     to_date = date.today()
     nohlc = pd.DataFrame(
@@ -408,8 +425,7 @@ class waveAlgo():
         print(orderId)
         cur_balance = self._calculate_balance()
         _logger.info(cur_balance)
-        balance = self.config[
-          'funds'] if cur_balance > self.config['funds'] else cur_balance
+        balance = self.funds if cur_balance > self.funds else cur_balance
         ltp = self.kite.quote(orderId).get(orderId)['last_price']
         no_of_lots = int(cur_balance /
                          ((25 if symbol == "BANKNIFTY" else 50) * ltp))
@@ -631,7 +647,7 @@ def data(msg):
                           by=['unsubscribe', 'entry_time'],
                           ascending=[False, False]).values.tolist(),
                         profit=profit,
-                        balance=wv.balance)
+                        balance=wv.balance, ce_oi=wv.ce_oi, pe_oi=wv.pe_oi, diff=wv.difference)
   # time.sleep(1)
   return socket.emit("message", res, broadcast=True)
 
