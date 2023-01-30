@@ -103,6 +103,9 @@ class waveAlgo():
     self.ce_strike = oi_data.query(f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'CE' and expiry == '{expiry_filter}'")['tradingsymbol']
     self.pe_strike = oi_data.query(f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'PE' and expiry == '{expiry_filter}'")[
       'tradingsymbol']
+    self.ce_oi = 0
+    self.pe_oi = 0
+    self.difference = 0
 
   def temp_update_ltp(self):
     starttime = time.time()
