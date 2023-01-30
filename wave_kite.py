@@ -430,8 +430,9 @@ class waveAlgo():
         _logger.info(cur_balance)
         balance = self.funds if cur_balance > self.funds else cur_balance
         ltp = self.kite.quote(orderId).get(orderId)['last_price']
-        no_of_lots = int(cur_balance /
-                         ((25 if symbol == "BANKNIFTY" else 50) * ltp))
+        no_of_lots = int(cur_balance /  ((25 if symbol == "BANKNIFTY" else 50) * ltp))
+        if no_of_lots < 1:
+          no_of_lots = 1
         qty = (25 if symbol == "BANKNIFTY" else 50) * no_of_lots
         vals = {
           'orderId': orderId,
@@ -564,9 +565,7 @@ class waveAlgo():
             'NFO:Profit'))]['profit_loss'].sum()
         self.tradebook.loc[index,
                            'ltp'] = ltp  # if row.symbol == "NIFTY" else 15
-        self.tradebook.loc[
-          self.tradebook.query("orderId == 'NFO:Profit'").index,
-          "profit_loss"] = self.actual_profit
+        self.tradebook.loc[self.tradebook.query("orderId == 'NFO:Profit'").index,"profit_loss"] = self.actual_profit
         self.tradebook.loc[
           self.tradebook.query("orderId == 'NFO:Profit'").index,
           "remaining_balance"] = self.balance
