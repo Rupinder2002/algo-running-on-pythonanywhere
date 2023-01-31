@@ -13,19 +13,21 @@
 
     <div class="shadow pb-3 rounded">
         <div class="row">
-            <div class="col-xs-3">
+            <div class="col-xs-4">
                 <div class=" bd-highlight"><span>CE OI</span></div>
                 <div class=" bd-highlight"><span>{{ "{:,.2f}".format(ce_oi) }}</span></div>
             </div>
-            <div class="col-xs-3">
+            <div class="col-xs-4">
                 <div class=" bd-highlight"><span>PE OI</span></div>
                 <div class=" bd-highlight"><span>{{ "{:,.2f}".format(pe_oi) }}</span></div>
             </div>
-            <div class="col-xs-3">
+            <div class="col-xs-4">
                 <div class=" bd-highlight"><span>Difference</span></div>
                 <div class=" bd-highlight"><span>{{ "{:,.2f}".format(diff) }}</span></div>
             </div>
-            <div class="col-xs-3 {{ 'profit' if (ce_oi-pe_oi) > 10000000 else 'loss' }}">
+        </div>
+      <div class="row">
+            <div class="col-xs-12 {{ 'profit' if (ce_oi-pe_oi) > 10000000 else 'loss' }}">
                 <div class=" bd-highlight"><span>JACKPOT</span></div>
             </div>
         </div>

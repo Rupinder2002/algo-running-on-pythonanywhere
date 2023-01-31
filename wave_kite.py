@@ -98,11 +98,15 @@ class waveAlgo():
   def _setup_oi_data(self, expiry, last):
     instruments = self.kite.instruments("NFO")
     oi_data = pd.DataFrame(instruments)
-    oi_data['expiry'] = oi_data['expiry'].map(lambda x: f"{x.strftime('%y')}{int(x.strftime('%m'))}")
+    oi_data['expiry'] = oi_data['expiry'].map(
+      lambda x: f"{x.strftime('%y')}{int(x.strftime('%m'))}")
     expiry_filter = f"{expiry.strftime('%y')}{int(expiry.strftime('%m'))}"
-    self.ce_strike = oi_data.query(f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'CE' and expiry == '{expiry_filter}'")['tradingsymbol']
-    self.pe_strike = oi_data.query(f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'PE' and expiry == '{expiry_filter}'")[
-      'tradingsymbol']
+    self.ce_strike = oi_data.query(
+      f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'CE' and expiry == '{expiry_filter}'"
+    )['tradingsymbol']
+    self.pe_strike = oi_data.query(
+      f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'PE' and expiry == '{expiry_filter}'"
+    )['tradingsymbol']
     self.ce_oi = 0
     self.pe_oi = 0
     self.difference = 0
@@ -206,9 +210,11 @@ class waveAlgo():
     ltp = self.kite.quote(symbol).get(symbol)
     instrument_token = ltp.get('instrument_token')
     ltp = ltp.get('last_price')
-    ce_dict = self.kite.quote(self.ce_strike.map(lambda x:f'NFO:{x}').values.tolist())
-    self.ce_oi = sum([v['oi'] for a,v in ce_dict.items()])
-    pe_dict = self.kite.quote(self.pe_strike.map(lambda x: f'NFO:{x}').values.tolist())
+    ce_dict = self.kite.quote(
+      self.ce_strike.map(lambda x: f'NFO:{x}').values.tolist())
+    self.ce_oi = sum([v['oi'] for a, v in ce_dict.items()])
+    pe_dict = self.kite.quote(
+      self.pe_strike.map(lambda x: f'NFO:{x}').values.tolist())
     self.pe_oi = sum([v['oi'] for a, v in pe_dict.items()])
     self.difference = abs(self.ce_oi - self.pe_oi)
     from_date = date.today() - timedelta(days=4)
@@ -430,7 +436,8 @@ class waveAlgo():
         _logger.info(cur_balance)
         balance = self.funds if cur_balance > self.funds else cur_balance
         ltp = self.kite.quote(orderId).get(orderId)['last_price']
-        no_of_lots = int(cur_balance /  ((25 if symbol == "BANKNIFTY" else 50) * ltp))
+        no_of_lots = int(cur_balance /
+                         ((25 if symbol == "BANKNIFTY" else 50) * ltp))
         if no_of_lots < 1:
           no_of_lots = 1
         qty = (25 if symbol == "BANKNIFTY" else 50) * no_of_lots
@@ -450,8 +457,8 @@ class waveAlgo():
           'remark': "",
           "unsubscribe": True
         }
-        target = ltp + (ltp * 0.25)
-        stoploss = ltp - (ltp * 0.15)
+        target = ltp + (ltp * 0.15)
+        stoploss = ltp - (ltp * 0.10)
         vals['target'] = target
         vals['stoploss'] = stoploss
         vals['entry_time'] = datetime.now(
@@ -565,7 +572,9 @@ class waveAlgo():
             'NFO:Profit'))]['profit_loss'].sum()
         self.tradebook.loc[index,
                            'ltp'] = ltp  # if row.symbol == "NIFTY" else 15
-        self.tradebook.loc[self.tradebook.query("orderId == 'NFO:Profit'").index,"profit_loss"] = self.actual_profit
+        self.tradebook.loc[
+          self.tradebook.query("orderId == 'NFO:Profit'").index,
+          "profit_loss"] = self.actual_profit
         self.tradebook.loc[
           self.tradebook.query("orderId == 'NFO:Profit'").index,
           "remaining_balance"] = self.balance
@@ -649,7 +658,10 @@ def data(msg):
                           by=['unsubscribe', 'entry_time'],
                           ascending=[False, False]).values.tolist(),
                         profit=profit,
-                        balance=wv.balance, ce_oi=wv.ce_oi, pe_oi=wv.pe_oi, diff=wv.difference)
+                        balance=wv.balance,
+                        ce_oi=wv.ce_oi,
+                        pe_oi=wv.pe_oi,
+                        diff=wv.difference)
   # time.sleep(1)
   return socket.emit("message", res, broadcast=True)
 
