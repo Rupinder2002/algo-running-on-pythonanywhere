@@ -101,12 +101,29 @@ class waveAlgo():
     oi_data['expiry'] = oi_data['expiry'].map(
       lambda x: f"{x.strftime('%y')}{int(x.strftime('%m'))}")
     expiry_filter = f"{expiry.strftime('%y')}{int(expiry.strftime('%m'))}"
-    self.ce_strike = oi_data.query(
+    ce_strike = oi_data.query(
       f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'CE' and expiry == '{expiry_filter}'"
-    )['tradingsymbol']
-    self.pe_strike = oi_data.query(
+    )
+    ce_instrument_token = ce_strike['instrument_token']
+    self.ce_strike = ce_strike['tradingsymbol']
+    pe_strike = oi_data.query(
       f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'PE' and expiry == '{expiry_filter}'"
-    )['tradingsymbol']
+    )
+    pe_instrument_token = pe_strike['instrument_token']
+    self.pe_strike = pe_strike['tradingsymbol']
+    from_date = date.today() - timedelta(days=1)
+    to_date = from_date
+    self.prev_ce_oi = 0
+    self.prev_pe_oi = 0
+    for inst in ce_instrument_token.values.tolist():
+      oi = self.kite.historical_data(inst,from_date=from_date,interval="day", to_date=to_date,continuous=1,oi=1)
+      if oi:
+        self.prev_ce_oi += oi[0].get('oi')
+    for inst in pe_instrument_token.values.tolist():
+      oi = self.kite.historical_data(inst, from_date=from_date, interval="day", to_date=to_date, continuous=1, oi=1)
+      if oi:
+        self.prev_pe_oi += oi[0].get('oi')
+
     self.ce_oi = 0
     self.pe_oi = 0
     self.difference = 0
@@ -212,10 +229,10 @@ class waveAlgo():
     ltp = ltp.get('last_price')
     ce_dict = self.kite.quote(
       self.ce_strike.map(lambda x: f'NFO:{x}').values.tolist())
-    self.ce_oi = sum([v['oi'] for a, v in ce_dict.items()])
+    self.ce_oi = sum([v['oi'] for a, v in ce_dict.items()]) - self.prev_ce_oi
     pe_dict = self.kite.quote(
       self.pe_strike.map(lambda x: f'NFO:{x}').values.tolist())
-    self.pe_oi = sum([v['oi'] for a, v in pe_dict.items()])
+    self.pe_oi = sum([v['oi'] for a, v in pe_dict.items()])  - self.prev_pe_oi
     self.difference = abs(self.ce_oi - self.pe_oi)
     from_date = date.today() - timedelta(days=4)
     to_date = date.today()
