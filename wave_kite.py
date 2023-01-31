@@ -9,10 +9,13 @@ import time
 import threading
 from kite_trade import *
 from flask import Flask, request, render_template, session, redirect
+
 from flask_socketio import SocketIO
 from collections import Counter
 from dateutil.tz import gettz
 import json
+import locale
+locale.setlocale(locale.LC_MONETARY, 'en_IN')
 
 import logging.handlers
 
@@ -229,10 +232,10 @@ class waveAlgo():
     ltp = ltp.get('last_price')
     ce_dict = self.kite.quote(
       self.ce_strike.map(lambda x: f'NFO:{x}').values.tolist())
-    self.ce_oi = sum([v['oi'] for a, v in ce_dict.items()]) - self.prev_ce_oi
+    self.ce_oi = (sum([v['oi'] for a, v in ce_dict.items()]) - self.prev_ce_oi) / 25
     pe_dict = self.kite.quote(
       self.pe_strike.map(lambda x: f'NFO:{x}').values.tolist())
-    self.pe_oi = sum([v['oi'] for a, v in pe_dict.items()])  - self.prev_pe_oi
+    self.pe_oi = (sum([v['oi'] for a, v in pe_dict.items()])  - self.prev_pe_oi) / 25
     self.difference = abs(self.ce_oi - self.pe_oi)
     from_date = date.today() - timedelta(days=4)
     to_date = date.today()
@@ -666,6 +669,15 @@ def algo_status(msg):
   _logger.info("Closed all position")
   wv.exit_all_position()
 
+# @app.context_processor
+# def numberFormat(value):
+#   return locale.currency(value, grouping=True)
+
+@app.context_processor
+def utility_processor():
+    def format_price(amount):
+        return locale.currency(amount, grouping=True)
+    return dict(format_price=format_price)
 
 @socket.on('message')
 def data(msg):
