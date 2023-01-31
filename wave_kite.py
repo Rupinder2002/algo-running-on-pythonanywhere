@@ -675,8 +675,10 @@ def algo_status(msg):
 
 @app.context_processor
 def utility_processor():
-    def format_price(amount):
-        return locale.currency(amount, grouping=True)
+    def format_price(number):
+      s, *d = str(number).partition(".")
+      r = ",".join([s[x - 2:x] for x in range(-3, -len(s), -2)][::-1] + [s[-3:]])
+      return "".join([r] + d)
     return dict(format_price=format_price)
 
 @socket.on('message')
