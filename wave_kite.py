@@ -79,52 +79,64 @@ class waveAlgo():
     self.kite_order = self.config['kite_order']
     self.resolution = 15
     self.wto_diff = []
-    next_expiry = get_next_weekday(date.today().strftime("%Y-%m-%d"), 3)
-    print(next_expiry)
-    if not check_last_expiry(next_expiry.day):
-      self.next_expiry = f"{next_expiry.strftime('%y')}{int(next_expiry.strftime('%m'))}{next_expiry.strftime('%d')}"
+    self.next_expiry_date = get_next_weekday(date.today().strftime("%Y-%m-%d"), 3)
+    if not check_last_expiry(self.next_expiry_date.day):
+      self.next_expiry = f"{self.next_expiry_date.strftime('%y')}{int(self.next_expiry_date.strftime('%m'))}{self.next_expiry_date.strftime('%d')}"
       last = False
     else:
-      self.next_expiry = f"{next_expiry.strftime('%y')}{next_expiry.strftime('%b').upper()}"
+      self.next_expiry = f"{self.next_expiry_date.strftime('%y')}{self.next_expiry_date.strftime('%b').upper()}"
       last = True
+    self._setup_tradebook()
 
     # enctoken = input("Enter Token: ")
     self.kite = KiteApp(enctoken=self.config['enctoken'])
-    self._setup_oi_data(next_expiry, last)
-    self._setup_tradebook()
+    if os.path.exists(f'{self.path}/ce_strike.csv') and os.path.exists(f'{self.path}/pe_strike.csv'):
+      self.ce_strike = pd.read_csv(f'{self.path}/ce_strike.csv')
+      self.pe_strike = pd.read_csv(f'{self.path}/pe_strike.csv')
+    elif self.kite.positions():
+      self._setup_oi_data(self.next_expiry_date)
+    else:
+      self.ce_strike = pd.DataFrame()
+      self.pe_strike = pd.DataFrame()
+      self.difference = 0
 
     threading.Thread(target=self.refresh).start()
     # threading.Thread(target=self.temp_update_ltp).start()
 
-  def _setup_oi_data(self, expiry, last):
+  def _setup_oi_data(self, expiry):
     instruments = self.kite.instruments("NFO")
     oi_data = pd.DataFrame(instruments)
     oi_data['expiry'] = oi_data['expiry'].map(
       lambda x: f"{x.strftime('%y')}{int(x.strftime('%m'))}")
     expiry_filter = f"{expiry.strftime('%y')}{int(expiry.strftime('%m'))}"
-    ce_strike = oi_data.query(
+    self.ce_strike = oi_data.query(
       f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'CE' and expiry == '{expiry_filter}'"
     )
-    ce_instrument_token = ce_strike['instrument_token']
-    self.ce_strike = ce_strike['tradingsymbol']
-    pe_strike = oi_data.query(
+    self.pe_strike = oi_data.query(
       f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'PE' and expiry == '{expiry_filter}'"
     )
-    pe_instrument_token = pe_strike['instrument_token']
-    self.pe_strike = pe_strike['tradingsymbol']
-    from_date = date.today() - timedelta(days=1)
-    to_date = from_date
-    self.prev_ce_oi = 0
-    self.prev_pe_oi = 0
-    # for inst in ce_instrument_token.values.tolist():
-    #   oi = self.kite.historical_data(inst,
-    #                                  from_date=from_date,
-    #                                  interval="day",
-    #                                  to_date=to_date,
-    #                                  continuous=1,
-    #                                  oi=1)
-    #   if oi:
-    #     self.prev_ce_oi += oi[0].get('oi')
+    from_date = date.today() - timedelta(days=5)
+    to_date = date.today() - timedelta(days=1)
+    for index, row in self.ce_strike.iterrows():
+      oi = self.kite.historical_data(row.instrument_token,
+                                     from_date=from_date,
+                                     interval="day",
+                                     to_date=to_date,
+                                     continuous=1,
+                                     oi=1)
+      if oi:
+         self.ce_strike.loc[index, 'oi'] = oi[-1].get('oi')
+    for index, row in self.pe_strike.iterrows():
+      oi = self.kite.historical_data(row.instrument_token,
+                                     from_date=from_date,
+                                     interval="day",
+                                     to_date=to_date,
+                                     continuous=1,
+                                     oi=1)
+      if oi:
+         self.pe_strike.loc[index, 'oi'] = oi[-1].get('oi')
+    self.ce_strike.to_csv(f'{self.path}/ce_strike.csv')
+    self.pe_strike.to_csv(f'{self.path}/pe_strike.csv')
     # for inst in pe_instrument_token.values.tolist():
     #   oi = self.kite.historical_data(inst,
     #                                  from_date=from_date,
@@ -134,10 +146,6 @@ class waveAlgo():
     #                                  oi=1)
     #   if oi:
     #     self.prev_pe_oi += oi[0].get('oi')
-
-    self.ce_oi = 0
-    self.pe_oi = 0
-    self.difference = 0
 
   def temp_update_ltp(self):
     starttime = time.time()
@@ -238,12 +246,17 @@ class waveAlgo():
     ltp = self.kite.quote(symbol).get(symbol)
     instrument_token = ltp.get('instrument_token')
     ltp = ltp.get('last_price')
-    ce_dict = self.kite.quote(
-      self.ce_strike.map(lambda x: f'NFO:{x}').values.tolist())
-    self.ce_oi = (sum([v['oi'] for a, v in ce_dict.items()]) - self.prev_ce_oi)
-    pe_dict = self.kite.quote(
-      self.pe_strike.map(lambda x: f'NFO:{x}').values.tolist())
-    self.pe_oi = (sum([v['oi'] for a, v in pe_dict.items()]) - self.prev_pe_oi)
+    ce_dict = self.kite.quote(self.ce_strike.dropna()['tradingsymbol'].map(lambda x: f'NFO:{x}').values.tolist())
+    self.ce_oi = 0
+    for index, row in self.ce_strike.dropna().iterrows():
+      self.ce_oi += (ce_dict.get('NFO:'+row.tradingsymbol, {}).get('oi', 0) - row.oi)
+    pe_dict = self.kite.quote(self.pe_strike.dropna()['tradingsymbol'].map(lambda x: f'NFO:{x}').values.tolist())
+    self.pe_oi = 0
+    for index, row in self.pe_strike.dropna().iterrows():
+      self.pe_oi += (pe_dict.get('NFO:' + row.tradingsymbol, {}).get('oi', 0) - row.oi)
+    # self.ce_oi = (sum([v['oi'] for a, v in ce_dict.items()]) - self.prev_ce_oi)
+    # pe_dict = self.kite.quote(self.pe_strike.dropna()['tradingsymbol'].map(lambda x: f'NFO:{x}').values.tolist())
+    # self.pe_oi = (sum([v['oi'] for a, v in pe_dict.items()]) - self.prev_pe_oi)
     self.difference = abs(self.ce_oi - self.pe_oi)
     from_date = date.today() - timedelta(days=4)
     to_date = date.today()
@@ -487,8 +500,8 @@ class waveAlgo():
         }
         target = ltp + (ltp * 0.15)
         stoploss = ltp - (ltp * 0.10)
-        vals['target'] = target
-        vals['stoploss'] = stoploss
+        vals['target'] = 1000 * no_of_lots
+        vals['stoploss'] = -500 * no_of_lots
         vals['entry_time'] = datetime.now(
           tz=gettz('Asia/Kolkata')).strftime("%H:%M:%S")
         vals['exit_time'] = np.nan
@@ -571,26 +584,21 @@ class waveAlgo():
         self.tradebook.loc[index, 'profit_loss'] = (ltp * self.tradebook.loc[index, 'qty']) - \
                                                    self.tradebook.loc[
                                                        index, 'investment']
-        change_target_sl = 2  # (5 if row.symbol == "BANKNIFTY" else 2)
+        change_target_sl = 200  # (5 if row.symbol == "BANKNIFTY" else 2)
         pro_loss = round(
           (ltp * qty) - (self.tradebook.loc[index, 'buy_price'] * qty) - 60, 2)
-        print(ltp)
         # if pro_loss >= 1000:  # (2000 if row.symbol == "BANKNIFTY" else 1200):
 
-        if ltp >= self.tradebook.loc[index, 'target']:
-          new_sl = ltp - change_target_sl
-          self.tradebook.loc[index,
-                             'target'] += 5 if row.symbol == "NIFTY" else 15
-          self.tradebook.loc[index, 'stoploss'] = new_sl if new_sl > self.tradebook.loc[
-              index, 'stoploss'] else \
+        if pro_loss >= self.tradebook.loc[index, 'target']:
+          new_sl = pro_loss - change_target_sl
+          self.tradebook.loc[index,'target'] += change_target_sl
+          self.tradebook.loc[index, 'stoploss'] = new_sl if new_sl > self.tradebook.loc[index, 'stoploss'] else \
               self.tradebook.loc[index, 'stoploss']
-        if ltp < self.tradebook.loc[index, 'stoploss']:
+        if pro_loss < self.tradebook.loc[index, 'stoploss']:
           self._orderUpdate(index, "StopLoss", "Stop Loss Hit", ltp,
                             row.symbol)
         if self.tradebook.loc[index, 'qty'] > 0:
-          self.tradebook.loc[
-            index,
-            'profit_loss'] = pro_loss  # (25 if row.symbol == "BANKNIFTY" else 50)
+          self.tradebook.loc[index,'profit_loss'] = pro_loss  # (25 if row.symbol == "BANKNIFTY" else 50)
         else:
           self.tradebook.loc[index, 'profit_loss'] = (
             self.tradebook.loc[index, 'exit_price'] *
@@ -598,8 +606,7 @@ class waveAlgo():
         self.actual_profit = self.tradebook[self.tradebook['orderId'].map(
           lambda x: str(x).startswith('NFO:') and not str(x).startswith(
             'NFO:Profit'))]['profit_loss'].sum()
-        self.tradebook.loc[index,
-                           'ltp'] = ltp  # if row.symbol == "NIFTY" else 15
+        self.tradebook.loc[index,'ltp'] = ltp  # if row.symbol == "NIFTY" else 15
         self.tradebook.loc[
           self.tradebook.query("orderId == 'NFO:Profit'").index,
           "profit_loss"] = self.actual_profit
@@ -656,6 +663,7 @@ def token(msg):
   json_object = json.dumps(wv.config, indent=4)
   with open(wv.config_path, 'w') as f:
     f.write(json_object)
+  wv._setup_oi_data(wv.next_expiry_date)
 
 
 @socket.on('liveMode')
