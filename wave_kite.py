@@ -16,6 +16,7 @@ from dateutil.tz import gettz
 import json
 
 import logging.handlers
+import pandas
 
 logging.basicConfig(level=logging.INFO,
                     handlers=[logging.StreamHandler()],
@@ -88,89 +89,48 @@ class waveAlgo():
       self.next_expiry = f"{self.next_expiry_date.strftime('%y')}{self.next_expiry_date.strftime('%b').upper()}"
       last = True
     self._setup_tradebook()
-    self.difference = 0
-    self.ce_oi = 0
-    self.pe_oi = 0
+
 
     # enctoken = input("Enter Token: ")
     self.kite = KiteApp(enctoken=self.config['enctoken'])
-    if os.path.exists(f'{self.path}/ce_strike.csv') and os.path.exists(
-        f'{self.path}/pe_strike.csv'):
-      self.ce_strike = pd.read_csv(f'{self.path}/ce_strike.csv')
-      self.pe_strike = pd.read_csv(f'{self.path}/pe_strike.csv')
-    elif self.kite.positions():
-      self._setup_oi_data(self.next_expiry_date)
-    else:
-      self.ce_strike = pd.DataFrame()
-      self.pe_strike = pd.DataFrame()
-
     threading.Thread(target=self.refresh).start()
+    threading.Thread(target=self.oi_data).start()
     # threading.Thread(target=self.temp_update_ltp).start()
 
-  def _setup_oi_data(self, expiry):
-    print("getting oi data")
-    instruments = self.kite.instruments("NFO")
-    oi_data = pd.DataFrame(instruments)
-    oi_data['expiry'] = oi_data['expiry'].map(
-      lambda x: f"{x.strftime('%y')}{int(x.strftime('%m'))}")
-    expiry_filter = f"{expiry.strftime('%y')}{int(expiry.strftime('%m'))}"
-    self.ce_strike = oi_data.query(
-      f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'CE' and expiry == '{expiry_filter}'"
-    )
-    self.pe_strike = oi_data.query(
-      f"segment == 'NFO-OPT' and name == 'BANKNIFTY' and instrument_type == 'PE' and expiry == '{expiry_filter}'"
-    )
-    from_date = date.today() - timedelta(days=5)
-    to_date = date.today() - timedelta(days=1)
-    for index, row in self.ce_strike.iterrows():
-      oi = self.kite.historical_data(row.instrument_token,
-                                     from_date=from_date,
-                                     interval="day",
-                                     to_date=to_date,
-                                     continuous=1,
-                                     oi=1)
-      if oi:
-        self.ce_strike.loc[index, 'oi'] = oi[-1].get('oi')
-    for index, row in self.pe_strike.iterrows():
-      oi = self.kite.historical_data(row.instrument_token,
-                                     from_date=from_date,
-                                     interval="day",
-                                     to_date=to_date,
-                                     continuous=1,
-                                     oi=1)
-      if oi:
-        self.pe_strike.loc[index, 'oi'] = oi[-1].get('oi')
-    self.ce_strike.to_csv(f'{self.path}/ce_strike.csv')
-    self.pe_strike.to_csv(f'{self.path}/pe_strike.csv')
-    # for inst in pe_instrument_token.values.tolist():
-    #   oi = self.kite.historical_data(inst,
-    #                                  from_date=from_date,
-    #                                  interval="day",
-    #                                  to_date=to_date,
-    #                                  continuous=1,
-    #                                  oi=1)
-    #   if oi:
-    #     self.prev_pe_oi += oi[0].get('oi')
-
-  def temp_update_ltp(self):
+  def oi_data(self):
+    # threading.Thread(target=self._place_order).start()
     starttime = time.time()
     while True:
       try:
-        tradebook = self.tradebook[self.tradebook['orderId'].map(
-          lambda x: str(x).startswith('NFO') and not str(x).startswith(
-            'NFO:Profit'))]  # & self.tradebook['unsubscribe']]
-        if not tradebook.empty:
-          tradebook = tradebook.loc[random.choice(list(
-            tradebook.index.values))]
-          ltp = tradebook['ltp'] or 0
-          self._update_ltp({
-            tradebook['orderId']: {
-              "symbol": tradebook['orderId'],
-              "last_price": random.randint(ltp - 5, ltp + 5)
-            }
-          })
+        t = threading.Thread(target=self._setup_oi_data)
+        t.start()
+      except:
+        pass
       finally:
-        time.sleep(1 - ((time.time() - starttime) % 1))
+        pass
+        time.sleep(10 - ((time.time() - starttime) % 10))
+
+  def _setup_oi_data(self):
+    self.session = requests.Session()
+    self.headers = {
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, '
+                    'like Gecko) Chrome/80.0.3987.149 Safari/537.36',
+      'accept-language': 'en,gu;q=0.9,hi;q=0.8',
+      'accept-encoding': 'gzip, deflate, br'}
+    response = self.session.get("https://www.nseindia.com/option-chain", headers=self.headers, timeout=50)
+    cookies = response.cookies
+    response = self.session.get("https://www.nseindia.com/api/option-chain-indices?symbol=BANKNIFTY",
+                                headers=self.headers, timeout=5, cookies=cookies)
+    self.bndf = pandas.read_json(response.text)
+    self.bnce_values = pandas.DataFrame(data['CE'] for data in self.bndf['records']['data'] if
+                                        'CE' in data and data['expiryDate'] == self.bndf['records']['expiryDates'][
+                                          0])
+    self.bnpe_values = pandas.DataFrame(data['PE'] for data in self.bndf['records']['data'] if
+                                        'PE' in data and data['expiryDate'] == self.bndf['records']['expiryDates'][
+                                          0])
+    self.ce_oi = self.bnce_values['changeinOpenInterest'].sum()
+    self.pe_oi = self.bnpe_values['changeinOpenInterest'].sum()
+    self.difference = abs(self.ce_oi - self.pe_oi) * 25
 
   def _setup_tradebook(self):
     self.directory = f"{date.today().strftime('%Y-%m-%d')}"
@@ -253,22 +213,9 @@ class waveAlgo():
     ltp = ltp.get('last_price')
     ce_dict = self.kite.quote(self.ce_strike.dropna()['tradingsymbol'].map(
       lambda x: f'NFO:{x}').values.tolist())
-    self.ce_oi = 0
-    for index, row in self.ce_strike.dropna().iterrows():
-      self.ce_oi += (ce_dict.get('NFO:' + row.tradingsymbol, {}).get('oi', 0) -
-                     row.oi)
-    self.ce_oi = self.ce_oi * 25
-    pe_dict = self.kite.quote(self.pe_strike.dropna()['tradingsymbol'].map(
-      lambda x: f'NFO:{x}').values.tolist())
-    self.pe_oi = 0
-    for index, row in self.pe_strike.dropna().iterrows():
-      self.pe_oi += (pe_dict.get('NFO:' + row.tradingsymbol, {}).get('oi', 0) -
-                     row.oi)
-    self.pe_oi = self.pe_oi * 25
     # self.ce_oi = (sum([v['oi'] for a, v in ce_dict.items()]) - self.prev_ce_oi)
     # pe_dict = self.kite.quote(self.pe_strike.dropna()['tradingsymbol'].map(lambda x: f'NFO:{x}').values.tolist())
     # self.pe_oi = (sum([v['oi'] for a, v in pe_dict.items()]) - self.prev_pe_oi)
-    self.difference = abs(self.ce_oi - self.pe_oi)
     from_date = date.today() - timedelta(days=4)
     to_date = date.today()
     nohlc = pd.DataFrame(

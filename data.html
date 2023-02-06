@@ -1,66 +1,71 @@
 {% block profit %}
-    <div class="row">
-        <div class="col-xs-6 shadow pb-3 rounded profit_bal">
-            <div class=" bd-highlight"><span>Balance</span></div>
-            <div class=" bd-highlight"><span>₹{{ format_price(balance) }}</span></div>
-        </div>
-        <div class="col-xs-6 shadow pb-3 rounded profit_bal">
-            <div class="bd-highlight"><span>Profit/Loss</span></div>
-            <div class="bd-highlight"><span
-                    class='{{ "profit" if profit > 0 else "loss" }}'>₹{{ format_price(profit) }}</span></div>
-        </div>
+<div class="row">
+    <div class="col-xs-6 shadow pb-3 rounded profit_bal">
+        <div class=" bd-highlight"><span>Balance</span></div>
+        <div class=" bd-highlight"><span>₹{{ format_price(balance) }}</span></div>
     </div>
+    <div class="col-xs-6 shadow pb-3 rounded profit_bal">
+        <div class="bd-highlight"><span>Profit/Loss</span></div>
+        <div class="bd-highlight"><span
+                class='{{ "profit" if profit > 0 else "loss" }}'>₹{{ format_price(profit) }}</span></div>
+    </div>
+</div>
 
-    <div class="shadow pb-3 rounded">
-        <div class="row">
-            <div class="col-xs-4">
-                <div class=" bd-highlight"><span>CE OI</span></div>
-                <div class=" bd-highlight"><span>{{ format_price(ce_oi) }}</span></div>
-            </div>
-            <div class="col-xs-4">
-                <div class=" bd-highlight"><span>PE OI</span></div>
-                <div class=" bd-highlight"><span>{{ format_price(pe_oi) }}</span></div>
-            </div>
-            <div class="col-xs-4">
-                <div class=" bd-highlight"><span>Difference</span></div>
-                <div class=" bd-highlight"><span>{{ format_price(diff) }}</span></div>
-            </div>
+<div class="shadow pb-3 rounded">
+    <div class="row">
+        <div class="col-xs-4">
+            <div class=" bd-highlight"><span>CE OI</span></div>
+            <div class=" bd-highlight"><span>{{ format_price(ce_oi) }}</span></div>
         </div>
-      <div class="row">
-            <div class="col-xs-12 {{ 'profit' if (ce_oi-pe_oi) > 10000000 else 'loss' }}">
-                <div class=" bd-highlight"><span>JACKPOT</span></div>
-            </div>
+        <div class="col-xs-4">
+            <div class=" bd-highlight"><span>PE OI</span></div>
+            <div class=" bd-highlight"><span>{{ format_price(pe_oi) }}</span></div>
+        </div>
+        <div class="col-xs-4">
+            <div class=" bd-highlight"><span>Difference</span></div>
+            <div class=" bd-highlight"><span>{{ format_price(diff) }}</span></div>
         </div>
     </div>
+    <div class="row" style="text-align:center">
+        <div class="col-xs-4">
+            <div class="bd-highlight {{ 'loss-jp' if ce_oi > pe_oi else 'profit-jp' }}"><span>{{ 'Buy Put' if ce_oi > pe_oi else 'Buy Call' }}</span></div>
+        </div>
+        {% if diff > 10000000 %}
+             <div class="col-xs-8">
+                <div class="bd-highlight {{ 'loss-jp' if ce_oi > pe_oi else 'profit-jp' }}"><span>Jackpot</span></div>
+            </div>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}
 
 {% block content %}
-    {% for row in row_data %}
-        <div class="shadow mb-3 rounded">
-            <div class="row">
-                <div class="col-xs-12">
-                    <div class="d-inline-flex flex-column bd-highlight mb-3">
-                        <div class="p-1 bd-highlight"><span>{{ row[0] }}</span></div>
-                        <div class="p-1 bd-highlight"><span>Remark:{{ row[12] }}</span></div>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-xs-6">
-                    <div class="p-1 bd-highlight"><span>Invested ₹{{ format_price(row[4]) }}</span></div>
-                    <div class="p-1 bd-highlight"><span>{{ row[6] }} qty</span></div>
-                    <div class="p-1 bd-highlight"><span>{{ row[7] }} SL</span></div>
-                  <div class="p-1 bd-highlight"><span>{{ row[8] }} TG</span></div>
-                </div>
-                <div class="col-xs-6 trade-right">
-                    <div class="p-1 bd-highlight"><span
-                            class='{{ "profit" if row[11] > 0 else "loss" }}'>₹{{ format_price(row[11]) }}</span>
-                    </div>
-                    <div class="p-1 bd-highlight"><span>₹{{ row[5] }} Avg.</span></div>
-                    <div class="p-1 bd-highlight"><span>LTP {{ row[10] }}</span></div>
-                </div>
+{% for row in row_data %}
+<div class="shadow mb-3 rounded">
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="d-inline-flex flex-column bd-highlight mb-3">
+                <div class="p-1 bd-highlight"><span>{{ row[0] }}</span></div>
+                <div class="p-1 bd-highlight"><span>Remark:{{ row[12] }}</span></div>
             </div>
         </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-6">
+            <div class="p-1 bd-highlight"><span>Invested ₹{{ format_price(row[4]) }}</span></div>
+            <div class="p-1 bd-highlight"><span>{{ row[6] }} qty</span></div>
+            <div class="p-1 bd-highlight"><span>{{ row[7] }} SL</span></div>
+            <div class="p-1 bd-highlight"><span>{{ row[8] }} TG</span></div>
+        </div>
+        <div class="col-xs-6 trade-right">
+            <div class="p-1 bd-highlight"><span
+                    class='{{ "profit" if row[11] > 0 else "loss" }}'>₹{{ format_price(row[11]) }}</span>
+            </div>
+            <div class="p-1 bd-highlight"><span>₹{{ row[5] }} Avg.</span></div>
+            <div class="p-1 bd-highlight"><span>LTP {{ row[10] }}</span></div>
+        </div>
+    </div>
+</div>
 
-    {% endfor %}
+{% endfor %}
 {% endblock %}
