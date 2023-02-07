@@ -211,8 +211,6 @@ class waveAlgo():
     ltp = self.kite.quote(symbol).get(symbol)
     instrument_token = ltp.get('instrument_token')
     ltp = ltp.get('last_price')
-    ce_dict = self.kite.quote(self.ce_strike.dropna()['tradingsymbol'].map(
-      lambda x: f'NFO:{x}').values.tolist())
     # self.ce_oi = (sum([v['oi'] for a, v in ce_dict.items()]) - self.prev_ce_oi)
     # pe_dict = self.kite.quote(self.pe_strike.dropna()['tradingsymbol'].map(lambda x: f'NFO:{x}').values.tolist())
     # self.pe_oi = (sum([v['oi'] for a, v in pe_dict.items()]) - self.prev_pe_oi)
@@ -458,8 +456,8 @@ class waveAlgo():
         }
         target = ltp + (ltp * 0.15)
         stoploss = ltp - (ltp * 0.10)
-        vals['target'] = 1500 * no_of_lots
-        vals['stoploss'] = -1000 * no_of_lots
+        vals['target'] = target
+        vals['stoploss'] = stoploss
         vals['entry_time'] = datetime.now(
           tz=gettz('Asia/Kolkata')).strftime("%H:%M:%S")
         vals['exit_time'] = np.nan
@@ -542,17 +540,17 @@ class waveAlgo():
         self.tradebook.loc[index, 'profit_loss'] = (ltp * self.tradebook.loc[index, 'qty']) - \
                                                    self.tradebook.loc[
                                                        index, 'investment']
-        change_target_sl = 200  # (5 if row.symbol == "BANKNIFTY" else 2)
+        change_target_sl = 0.25  # (5 if row.symbol == "BANKNIFTY" else 2)
         pro_loss = round(
           (ltp * qty) - (self.tradebook.loc[index, 'buy_price'] * qty) - 60, 2)
         # if pro_loss >= 1000:  # (2000 if row.symbol == "BANKNIFTY" else 1200):
 
-        if pro_loss >= self.tradebook.loc[index, 'target']:
-          new_sl = pro_loss - change_target_sl
-          self.tradebook.loc[index, 'target'] += change_target_sl
+        if ltp >= self.tradebook.loc[index, 'target']:
+          new_sl = ltp - (ltp * change_target_sl)
+          self.tradebook.loc[index,'target'] += 5 if row.symbol == "NIFTY" else 15
           self.tradebook.loc[index, 'stoploss'] = new_sl if new_sl > self.tradebook.loc[index, 'stoploss'] else \
-              self.tradebook.loc[index, 'stoploss']
-        if pro_loss < self.tradebook.loc[index, 'stoploss']:
+            self.tradebook.loc[index, 'stoploss']
+        if ltp < self.tradebook.loc[index, 'stoploss']:
           self._orderUpdate(index, "StopLoss", "Stop Loss Hit", ltp,
                             row.symbol)
         if self.tradebook.loc[index, 'qty'] > 0:
