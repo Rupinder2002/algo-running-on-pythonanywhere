@@ -622,7 +622,6 @@ def token(msg):
   json_object = json.dumps(wv.config, indent=4)
   with open(wv.config_path, 'w') as f:
     f.write(json_object)
-  wv._setup_oi_data(wv.next_expiry_date)
 
 
 @socket.on('liveMode')
