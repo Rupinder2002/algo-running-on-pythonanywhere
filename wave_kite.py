@@ -211,8 +211,6 @@ class waveAlgo():
     ltp = self.kite.quote(symbol).get(symbol)
     instrument_token = ltp.get('instrument_token')
     ltp = ltp.get('last_price')
-    ce_dict = self.kite.quote(self.ce_strike.dropna()['tradingsymbol'].map(
-      lambda x: f'NFO:{x}').values.tolist())
     # self.ce_oi = (sum([v['oi'] for a, v in ce_dict.items()]) - self.prev_ce_oi)
     # pe_dict = self.kite.quote(self.pe_strike.dropna()['tradingsymbol'].map(lambda x: f'NFO:{x}').values.tolist())
     # self.pe_oi = (sum([v['oi'] for a, v in pe_dict.items()]) - self.prev_pe_oi)
@@ -614,7 +612,6 @@ def token(msg):
   json_object = json.dumps(wv.config, indent=4)
   with open(wv.config_path, 'w') as f:
     f.write(json_object)
-  wv._setup_oi_data(wv.next_expiry_date)
 
 
 @socket.on('liveMode')
