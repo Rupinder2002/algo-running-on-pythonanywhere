@@ -312,12 +312,15 @@ class waveAlgo():
       is_long = all(is_long)
       is_short = all(is_short)
 
-      buy_sell_signal['ready_ce'] = (
-        is_long and abs(buy_sell_signal['wtdiff'].tail(1).values[0]) > 2
-      ) and buy_sell_signal['trend'].tail(1).values[0] == "UP"
-      buy_sell_signal['ready_pe'] = (
-        is_short and abs(buy_sell_signal['wtdiff'].tail(1).values[0]) > 2
-      ) and buy_sell_signal['trend'].tail(1).values[0] == "DOWN"
+      # buy_sell_signal['ready_ce'] = (
+      #   is_long and abs(buy_sell_signal['wtdiff'].tail(1).values[0]) > 2
+      # ) and buy_sell_signal['trend'].tail(1).values[0] == "UP"
+      # buy_sell_signal['ready_pe'] = (
+      #   is_short and abs(buy_sell_signal['wtdiff'].tail(1).values[0]) > 2
+      # ) and buy_sell_signal['trend'].tail(1).values[0] == "DOWN"
+
+      buy_sell_signal['ready_ce'] = buy_sell_signal['trend'].tail(1).values[0] == "UP"
+      buy_sell_signal['ready_pe'] = buy_sell_signal['trend'].tail(1).values[0] == "DOWN"
 
       _logger.info(
         f"{buy_sell_signal.tail(1).to_string()} {self.actual_profit}")
@@ -326,13 +329,7 @@ class waveAlgo():
         f"symbol == '{old_symbol}' and side == 'PE' and unsubscribe != False")
       if not t.empty:
         for index, row in t.iterrows():
-          # if buy_sell_signal.tail(1)['pe_sl'].values[0] < ltp:
-          #   self._orderUpdate(
-          #     index, "Stoploss",
-          #     f"{buy_sell_signal.tail(1)['pe_sl'].values[0]}  < {ltp}",
-          #     row.ltp, old_symbol)
-          #   return False, False
-          if is_long:
+          if buy_sell_signal['ready_ce'].tail(1).bool() and is_increasing:
             self._orderUpdate(index, "Exited", f"due to is_long", row.ltp,
                               old_symbol)
             return False, False
@@ -340,18 +337,10 @@ class waveAlgo():
         f"symbol == '{old_symbol}' and side == 'CE' and unsubscribe != False")
       if not t.empty:
         for index, row in t.iterrows():
-          # if buy_sell_signal.tail(1)['ce_sl'].values[0] > ltp:
-          #   self._orderUpdate(
-          #     index, "Stoploss",
-          #     f"{buy_sell_signal.tail(1)['ce_sl'].values[0]}  > {ltp}",
-          #     row.ltp, old_symbol)
-          #   return False, False
-          if is_short:
+          if buy_sell_signal['ready_pe'].tail(1).bool() and is_decreasing:
             self._orderUpdate(index, "Exited", f"due to is_short", row.ltp,
                               old_symbol)
             return False, False
-      # if abs(buy_sell_signal['prev_candle_diff'].tail(1).values[0]) > 50:
-      #     return False, False
       if buy_sell_signal['ready_ce'].tail(1).bool():
         return True, "CE"
       elif buy_sell_signal['ready_pe'].tail(1).bool():
@@ -456,10 +445,11 @@ class waveAlgo():
           'remark': "",
           "unsubscribe": True
         }
-        target = ltp + (ltp * 0.15)
-        stoploss = ltp - (ltp * 0.10)
-        vals['target'] = 1500 * no_of_lots
-        vals['stoploss'] = -1000 * no_of_lots
+        target = 1200 * no_of_lots
+        percentage = (1200 * no_of_lots) / vals['investment']
+        stoploss = ltp - (ltp * percentage)
+        vals['target'] = target
+        vals['stoploss'] = stoploss
         vals['entry_time'] = datetime.now(
           tz=gettz('Asia/Kolkata')).strftime("%H:%M:%S")
         vals['exit_time'] = np.nan
@@ -542,23 +532,20 @@ class waveAlgo():
         self.tradebook.loc[index, 'profit_loss'] = (ltp * self.tradebook.loc[index, 'qty']) - \
                                                    self.tradebook.loc[
                                                        index, 'investment']
-        change_target_sl = 200  # (5 if row.symbol == "BANKNIFTY" else 2)
-        pro_loss = round(
-          (ltp * qty) - (self.tradebook.loc[index, 'buy_price'] * qty) - 60, 2)
+        change_target_sl = 0.10  # (5 if row.symbol == "BANKNIFTY" else 2)
+        pro_loss = round((ltp * qty) - (self.tradebook.loc[index, 'buy_price'] * qty) - 60, 2)
         # if pro_loss >= 1000:  # (2000 if row.symbol == "BANKNIFTY" else 1200):
 
         if pro_loss >= self.tradebook.loc[index, 'target']:
-          new_sl = pro_loss - change_target_sl
+          new_sl = ltp - change_target_sl
           self.tradebook.loc[index, 'target'] += change_target_sl
           self.tradebook.loc[index, 'stoploss'] = new_sl if new_sl > self.tradebook.loc[index, 'stoploss'] else \
               self.tradebook.loc[index, 'stoploss']
-        if pro_loss < self.tradebook.loc[index, 'stoploss']:
+        if ltp < self.tradebook.loc[index, 'stoploss']:
           self._orderUpdate(index, "StopLoss", "Stop Loss Hit", ltp,
                             row.symbol)
         if self.tradebook.loc[index, 'qty'] > 0:
-          self.tradebook.loc[
-            index,
-            'profit_loss'] = pro_loss  # (25 if row.symbol == "BANKNIFTY" else 50)
+          self.tradebook.loc[index,'profit_loss'] = pro_loss  # (25 if row.symbol == "BANKNIFTY" else 50)
         else:
           self.tradebook.loc[index, 'profit_loss'] = (
             self.tradebook.loc[index, 'exit_price'] *
@@ -574,6 +561,9 @@ class waveAlgo():
         self.tradebook.loc[
           self.tradebook.query("orderId == 'NFO:Profit'").index,
           "remaining_balance"] = self.balance
+        if self.balance < 0 :
+          self.tradebook.drop(df.tail(1).index,inplace=True) # drop last n rows
+
 
     # tradebook.to_csv(self.tradebook_path, index=False)
 
