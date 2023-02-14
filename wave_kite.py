@@ -132,7 +132,7 @@ class waveAlgo():
     self.pe_oi = self.bnpe_values['changeinOpenInterest'].sum()
     self.difference = abs(self.ce_oi - self.pe_oi) * 25
     self.is_jackpot = bool(self.difference > 10000000)
-    self.oi_signal = 'CE' if self.ce_oi > self.pe_oi else 'PE'
+    self.oi_signal = 'PE' if self.ce_oi > self.pe_oi else 'CE'
 
   def _setup_tradebook(self):
     self.directory = f"{date.today().strftime('%Y-%m-%d')}"
@@ -538,7 +538,7 @@ class waveAlgo():
         # if pro_loss >= 1000:  # (2000 if row.symbol == "BANKNIFTY" else 1200):
 
         if pro_loss >= self.tradebook.loc[index, 'target']:
-          new_sl = ltp - change_target_sl
+          new_sl = ltp - (ltp * change_target_sl)
           self.tradebook.loc[index, 'target'] += change_target_sl
           self.tradebook.loc[index, 'stoploss'] = new_sl if new_sl > self.tradebook.loc[index, 'stoploss'] else \
               self.tradebook.loc[index, 'stoploss']
