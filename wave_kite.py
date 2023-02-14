@@ -131,6 +131,8 @@ class waveAlgo():
     self.ce_oi = self.bnce_values['changeinOpenInterest'].sum()
     self.pe_oi = self.bnpe_values['changeinOpenInterest'].sum()
     self.difference = abs(self.ce_oi - self.pe_oi) * 25
+    self.is_jackpot = bool(self.difference > 10000000)
+    self.oi_signal = 'CE' if self.ce_oi > self.pe_oi else 'PE'
 
   def _setup_tradebook(self):
     self.directory = f"{date.today().strftime('%Y-%m-%d')}"
@@ -443,8 +445,9 @@ class waveAlgo():
           'remark': "",
           "unsubscribe": True
         }
-        target = 1200 * no_of_lots
-        percentage = (1200 * no_of_lots) / vals['investment']
+        amount = 1200 if side.lower() == self.oi_signal.lower() else 600
+        target = amount * no_of_lots
+        percentage = min(((amount * no_of_lots) / vals['investment']), 0.25)
         stoploss = ltp - (ltp * percentage)
         vals['target'] = target
         vals['stoploss'] = stoploss
